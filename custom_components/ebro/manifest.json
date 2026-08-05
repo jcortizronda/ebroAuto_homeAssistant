@@ -1,0 +1,16 @@
+{
+  "domain": "ebro",
+  "name": "Ebro Auto",
+  "codeowners": ["@jcortizronda"],
+  "config_flow": true,
+  "documentation": "https://github.com/jcortizronda/ebroAuto_homeAssistant",
+  "integration_type": "device",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/jcortizronda/ebroAuto_homeAssistant/issues",
+  "requirements": [
+    "paho-mqtt>=2.0",
+    "requests>=2.28",
+    "pycryptodome>=3.17"
+  ],
+  "version": "1.0.0"
+}

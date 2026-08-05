@@ -1,0 +1,34 @@
+# serializer version: 1
+# name: test_headers_post
+  dict({
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Encoding': 'gzip, deflate',
+    'Accept-Language': 'it-IT',
+    'Authorization': 'Basic bGVnZW5kQXBwOmxlZ2VuZEFwcA==',
+    'CLIENT-TOC': 'Y',
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'DEPT-ID': '34',
+    'TENANT-CODE': '3000010',
+    'TENANT-ID': '3000010',
+    'User-Agent': 'okhttp/4.9.0',
+    'agent': 'android',
+    'appversion': '1.0.11',
+    'channelId': '4',
+    'countryId': '1',
+    'nonce': 'chery_legend_h5',
+    'signature': '6ead4ec99a6209b3f8190816cba8ff9d1a964dea2b67f66342b0e977dff22f60',
+    'tenantCode': '3000010',
+    'tenantID': '3000010',
+    'timestamp': '1768478400000',
+    'url': '/tsp/v1/app/vmc/queryList',
+    'version': '1.0.11',
+  })
+# ---
+# name: test_sm4_vectores
+  dict({
+    'bloque_exacto': '3091aadac00cb63485a827ca67ef180b0281840abda97f82ebc5f1f7ba3b9674',
+    'padLeft32': 'YpwJafauJhX8EiUto0PrWdgk6NKCzwezrEVVATxSGJkCgYQKval/guvF8fe6O5Z0',
+    'padRight32': 'nR9vbWetYm00+i/LyrhsVWKcCWn2riYV/BIlLaND61kCgYQKval/guvF8fe6O5Z0',
+    'plain': 'B4LerxtC47/ETrJB+5lVKw==',
+  })
+# ---

@@ -1,0 +1,12 @@
+{
+  "code": "000000",
+  "data": [
+    {
+      "vin": "LSJA0000000000001",
+      "nickname": "Ebro S900",
+      "modelName": "S900",
+      "brandName": "Ebro",
+      "carToken": "car-token-de-prueba"
+    }
+  ]
+}

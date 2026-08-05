@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Tests (el venv aislado de la suite; los .ambr de snapshots SÍ se versionan)
+.venv-test/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Home Assistant / runtime
+*_token.json
+*_pending_token.json
+token.json
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Nunca subir binarios/artefactos de reversing ni secretos de usuario
+*.apk
+*.apks
+*.hprof
+*.mitm
+certs/*.key

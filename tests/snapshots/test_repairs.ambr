@@ -1,0 +1,19 @@
+# serializer version: 1
+# name: test_se_crea_la_issue
+  IssueRegistryItemSnapshot({
+    'active': True,
+    'breaks_in_ha_version': None,
+    'created': <ANY>,
+    'data': dict({
+    }),
+    'dismissed_version': None,
+    'domain': 'ebro',
+    'is_fixable': True,
+    'is_persistent': False,
+    'issue_domain': None,
+    'learn_more_url': None,
+    'severity': <IssueSeverity.ERROR: 'error'>,
+    'translation_key': 'pin_wrong',
+    'translation_placeholders': None,
+  })
+# ---

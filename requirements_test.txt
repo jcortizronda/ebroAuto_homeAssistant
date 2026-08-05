@@ -1,0 +1,16 @@
+# Dependencias de test de Ebro Auto.
+#
+# pytest-homeassistant-custom-component trae el arnés completo de tests de Home Assistant
+# (fixtures `hass`, `entity_registry`, `snapshot` con la extensión de HA, MockConfigEntry,
+# snapshot_platform…) junto con las versiones EXACTAS de pytest/syrupy/freezegun que usa
+# HA core. No añadir aquí pytest ni syrupy sueltos: los fija este paquete.
+pytest-homeassistant-custom-component==0.13.352
+
+# Dependencias de EJECUCIÓN de la propia integración (= manifest.json → "requirements").
+# En producción las instala Home Assistant al cargar el componente; en los tests hay que
+# ponerlas a mano, o los imports de `core/` fallan ya en la fase de colección.
+paho-mqtt>=2.0
+pycryptodome>=3.17
+
+# Linter. Su configuración vive en pyproject.toml; el workflow lo ejecuta como job aparte.
+ruff

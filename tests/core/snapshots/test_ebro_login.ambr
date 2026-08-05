@@ -1,0 +1,19 @@
+# serializer version: 1
+# name: test_aes_encrypt_password_es_determinista
+  'pL/XCt8hSUbH1IHeSDdMcsJx5eiti9rxbxxYBOxJUe4='
+# ---
+# name: test_headers
+  dict({
+    'Authorization': 'Basic bGVnZW5kQXBwOmxlZ2VuZEFwcA==',
+    'accept': 'application/json, text/plain, */*',
+    'accept-language': 'es-ES',
+    'agent': 'android',
+    'client-toc': 'Y',
+    'content-type': 'application/x-www-form-urlencoded',
+    'dept-id': '34',
+    'tenant-code': '3000010',
+    'tenant-id': '3000010',
+    'user-agent': 'Dart/3.10 (dart:io)',
+    'version': '1.0.11',
+  })
+# ---

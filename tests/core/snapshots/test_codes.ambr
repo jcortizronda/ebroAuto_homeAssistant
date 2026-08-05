@@ -1,0 +1,15 @@
+# serializer version: 1
+# name: test_mapa_completo
+  dict({
+    '000000': 'ok ✅',
+    'A00000': 'token caducado/no válido ❌ (vuelve a iniciar sesión)',
+    'A00079': 'comando aceptado ✅',
+    'A00082': 'coche ocupado ⏳ (hay otro comando en curso) — reinténtalo en unos segundos',
+    'A00084': 'comando no permitido en este coche 🚫 (permiso denegado para esta función)',
+    'A00089': 'taskId no válido ❌ (hace falta un taskId validado por checkPassword)',
+    'A00546': 'taskId no válido ❌ (scene incorrecto en checkPassword)',
+    'A00567': 'parámetros de checkPassword incompletos ❌',
+    'A07312': 'límite de despertar 🚫 (el coche rechaza más despertares ahora, reinténtalo más tarde)',
+    'A07900': 'coche en reposo / no accesible (o firma/car_token no válidos) ⌛',
+  })
+# ---

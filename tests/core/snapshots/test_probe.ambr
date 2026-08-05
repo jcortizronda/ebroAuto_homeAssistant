@@ -1,0 +1,11 @@
+# serializer version: 1
+# name: test_rich_excluye_la_posicion
+  dict({
+    'chargeState': '1',
+    'dumpEnergy': '64.5',
+    'odometer': '12345',
+    'onlineStatus': '1',
+    'pureElectricRange': '60',
+    'vehicleSpeed': '0',
+  })
+# ---

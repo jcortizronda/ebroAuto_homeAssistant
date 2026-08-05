@@ -1,0 +1,19 @@
+# serializer version: 1
+# name: test_mensajes_de_checkpassword
+  dict({
+    'config': "Comando rechazado por el servidor [checkPassword code=A00285 'wrong password'] — no es el PIN: la cuenta no tiene permiso sobre este coche o la petición fue rechazada. Reinténtalo más tarde; si persiste se necesitan los logs.",
+    'pin': "PIN de comandos rechazado por el servidor [checkPassword code=A00285 'wrong password'] — vuelve a configurarlo en los ajustes de la integración",
+    'reauth': "Sesión caducada [checkPassword code=A00285 'wrong password'] — vuelve a autenticarte desde el aviso de Home Assistant",
+  })
+# ---
+# name: test_send_ok_y_envelope_firmado
+  dict({
+    'appId': 'euebro-1',
+    'clientType': '1',
+    'lockType': '0',
+    'seq': 'LSJA0000000000001-1768478400000',
+    'sign': 'DTX+84FETIN9A0EAK8FXWIZYDRZSOIDZ7BGX/XC1QIO=',
+    'taskId': 'task-en-cache',
+    'vin': 'LSJA0000000000001',
+  })
+# ---

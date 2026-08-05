@@ -1,0 +1,14 @@
+# Saltos de línea normalizados a LF en el repositorio.
+#
+# Sin esto, editar desde Windows sobre el montaje de WSL convierte los archivos a CRLF y
+# `git status` marca los 43 archivos como modificados (9.000+ líneas de diff que son solo
+# saltos de línea), enterrando los cambios reales.
+* text=auto eol=lf
+
+# Binarios: nunca tocar su contenido.
+*.png binary
+*.jpg binary
+*.apk binary
+
+# Snapshots de la suite: versionados y comparados como texto.
+*.ambr text eol=lf

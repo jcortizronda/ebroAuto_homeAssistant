@@ -1,0 +1,409 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ebro Auto",
+        "description": "Introduce el teléfono y la contraseña de tu cuenta Ebro, y el PIN del vehículo. El VIN y el ID de cuenta se detectan solos. La sesión se renueva sola.{reason}",
+        "data": {
+          "phone": "Teléfono de la cuenta",
+          "password": "Contraseña",
+          "pin": "PIN del vehículo (comandos)",
+          "area_code": "Prefijo de país (ej. 34)",
+          "bff": "BFF endpoint (avanzado)",
+          "tsp_host": "TSP host (avanzado)",
+          "car_mqtt_host": "Broker MQTT (avanzado)",
+          "car_mqtt_port": "Puerto MQTT (avanzado)",
+          "channel_id": "Channel ID (avanzado)",
+          "certs_src": "Carpeta de certificados mutual-TLS (opcional)"
+        }
+      },
+      "select_vehicle": {
+        "title": "Select vehicle",
+        "description": "Your account has more than one vehicle. Choose the VIN to add.",
+        "data": {
+          "vin": "Vehicle (VIN)"
+        }
+      },
+      "poll": {
+        "title": "Ebro Auto — polling intervals",
+        "description": "How often to refresh telemetry (battery, range, high voltage, charging…) depending on the car's state. Read-only. 0 = disabled in that state. You can keep the defaults and change them later in Options.",
+        "data": {
+          "poll_normal_min": "Parked (minutes, 0 = don't contact the car)",
+          "poll_plugged_min": "Plugged in, waiting to charge (minutes, 0 = off)",
+          "poll_charging_min": "Charging (minutes, 0 = off)",
+          "poll_moving_min": "Driving (minutes, 0 = off)",
+          "poll_moving_idle_min": "Driving but stopped — HV on, no movement (minutes, 0 = off)",
+          "plugged_wait_max_min": "Max plugged-in without charging (minutes, 0 = no limit)"
+        }
+      },
+      "reconfigure": {
+        "title": "Change the vehicle control PIN",
+        "description": "Enter the 4-digit PIN used for remote commands. The PIN is not used to log in, so no email code is needed. Fix this if commands report success but the car does nothing (wrong PIN).",
+        "data": {
+          "pin": "Vehicle control PIN"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Ebro Auto — reautenticar",
+        "description": "La sesión ({phone}) ha caducado. Introduce la contraseña para volver a entrar.{reason}",
+        "data": {
+          "password": "Contraseña"
+        }
+      }
+    },
+    "error": {
+      "login_failed": "Login fallido. Revisa teléfono/contraseña.",
+      "no_vehicle": "Login OK pero no se encontró ningún vehículo.",
+      "token_move_failed": "No se pudo guardar el token.",
+      "pin_required": "El PIN es obligatorio."
+    },
+    "abort": {
+      "already_configured": "This vehicle (VIN) is already configured.",
+      "token_move_failed": "Could not store the authentication token. Check Home Assistant's config folder permissions and try again.",
+      "reconfigure_no_entry": "Integration not found — reload Home Assistant and try again.",
+      "reconfigure_successful": "PIN updated. The integration was reloaded.",
+      "reauth_no_entry": "Integration not found — reload Home Assistant and try again.",
+      "reauth_successful": "Re-authentication successful. The integration was reloaded."
+    }
+  },
+  "issues": {
+    "pin_wrong": {
+      "title": "Ebro Auto: wrong command PIN",
+      "fix_flow": {
+        "step": {
+          "pin": {
+            "title": "Fix the vehicle control PIN",
+            "description": "Remote commands are being rejected because the 4-digit control PIN is wrong (the sensors keep working — this is not a login problem). Enter the correct PIN. Do not keep retrying with a wrong PIN, to avoid locking the Chery account.",
+            "data": {
+              "pin": "Vehicle control PIN"
+            }
+          }
+        },
+        "error": {
+          "pin_required": "Enter the vehicle control PIN."
+        },
+        "abort": {
+          "entry_not_found": "Integration not found — reload Home Assistant and try again."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ebro Auto — telemetry polling",
+        "description": "How often to refresh telemetry (battery, range, high voltage, charging…) depending on the car's state. Read-only: never wakes the car. Door/lock/cable states arrive separately over MQTT and don't depend on this. 0 = disabled in that state.",
+        "data": {
+          "poll_normal_min": "Parked (minutes, 0 = don't contact the car)",
+          "poll_plugged_min": "Plugged in, waiting to charge (minutes, 0 = off)",
+          "poll_charging_min": "Charging (minutes, 0 = off)",
+          "poll_moving_min": "Driving (minutes, 0 = off)",
+          "poll_moving_idle_min": "Driving but stopped — HV on, no movement (minutes, 0 = off)",
+          "plugged_wait_max_min": "Max plugged-in without charging (minutes, 0 = no limit)",
+          "vehicle_name": "Vehicle name (leave empty to use the name detected from the car)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "alta_tension_activa": {
+        "name": "Alta tensión activa"
+      },
+      "coche_despierto": {
+        "name": "Coche despierto"
+      },
+      "aviso_de_combustible_bajo": {
+        "name": "Aviso de combustible bajo"
+      },
+      "aviso_neumatico_del_derecho": {
+        "name": "Aviso neumático del. derecho"
+      },
+      "aviso_neumatico_del_izquierdo": {
+        "name": "Aviso neumático del. izquierdo"
+      },
+      "aviso_neumatico_tras_derecho": {
+        "name": "Aviso neumático tras. derecho"
+      },
+      "aviso_neumatico_tras_izquierdo": {
+        "name": "Aviso neumático tras. izquierdo"
+      },
+      "aviso_de_carga_necesaria": {
+        "name": "Aviso de carga necesaria"
+      },
+      "bateria_baja": {
+        "name": "Batería baja"
+      },
+      "capo": {
+        "name": "Capó"
+      },
+      "conexion": {
+        "name": "Conexión"
+      },
+      "ventanilla_del_derecha": {
+        "name": "Ventanilla del. derecha"
+      },
+      "ventanilla_del_izquierda": {
+        "name": "Ventanilla del. izquierda"
+      },
+      "ventanilla_tras_derecha": {
+        "name": "Ventanilla tras. derecha"
+      },
+      "ventanilla_tras_izquierda": {
+        "name": "Ventanilla tras. izquierda"
+      },
+      "motor": {
+        "name": "Motor"
+      },
+      "puerta_del_derecha": {
+        "name": "Puerta del. derecha"
+      },
+      "puerta_del_izquierda": {
+        "name": "Puerta del. izquierda"
+      },
+      "puerta_tras_derecha": {
+        "name": "Puerta tras. derecha"
+      },
+      "puerta_tras_izquierda": {
+        "name": "Puerta tras. izquierda"
+      },
+      "porton_en_movimiento": {
+        "name": "Portón en movimiento"
+      },
+      "purificacion_de_aire": {
+        "name": "Purificación de aire"
+      },
+      "calefaccion_del_parabrisas": {
+        "name": "Calefacción del parabrisas"
+      },
+      "sesion": {
+        "name": "Sesión"
+      },
+      "cable_de_carga_conectado": {
+        "name": "Cable de carga conectado"
+      },
+      "cortina_del_techo": {
+        "name": "Cortina del techo"
+      }
+    },
+    "button": {
+      "actualizar_ubicacion": {
+        "name": "Actualizar ubicación"
+      },
+      "actualizar_estado_completo": {
+        "name": "Actualizar estado completo"
+      },
+      "aplicar_carga_programada": {
+        "name": "Aplicar carga programada"
+      },
+      "ventilar_ventanillas": {
+        "name": "Ventilar ventanillas"
+      },
+      "localizar_coche_gps": {
+        "name": "Localizar coche (GPS)"
+      },
+      "despertar_coche": {
+        "name": "Despertar coche"
+      },
+      "encontrar_coche_luces": {
+        "name": "Encontrar coche (luces)"
+      }
+    },
+    "climate": {
+      "climatizacion": {
+        "name": "Climatización"
+      }
+    },
+    "cover": {
+      "maletero": {
+        "name": "Maletero"
+      },
+      "ventanillas": {
+        "name": "Ventanillas"
+      },
+      "techo_solar": {
+        "name": "Techo solar"
+      }
+    },
+    "device_tracker": {
+      "ubicacion": {
+        "name": "Ubicación"
+      }
+    },
+    "lock": {
+      "cierre_centralizado": {
+        "name": "Cierre centralizado"
+      }
+    },
+    "number": {
+      "duracion_de_la_climatizacion": {
+        "name": "Duración de la climatización"
+      },
+      "limite_de_carga": {
+        "name": "Límite de carga"
+      }
+    },
+    "sensor": {
+      "autonomia_gasolina": {
+        "name": "Autonomía gasolina"
+      },
+      "autonomia_electrica": {
+        "name": "Autonomía eléctrica"
+      },
+      "autonomia_total": {
+        "name": "Autonomía total"
+      },
+      "bateria": {
+        "name": "Batería"
+      },
+      "combustible_restante": {
+        "name": "Combustible restante"
+      },
+      "kilometraje_hibrido": {
+        "name": "Kilometraje híbrido"
+      },
+      "consumo_medio_de_combustible": {
+        "name": "Consumo medio de combustible"
+      },
+      "consumo_medio_electrico": {
+        "name": "Consumo medio eléctrico"
+      },
+      "corriente_bateria_at": {
+        "name": "Corriente batería AT"
+      },
+      "datos_del_coche_actualizados": {
+        "name": "Datos del coche actualizados"
+      },
+      "resultado_del_comando": {
+        "name": "Resultado del comando"
+      },
+      "resultado_sonda_de_ubicacion": {
+        "name": "Resultado sonda de ubicación"
+      },
+      "resultado_del_despertar": {
+        "name": "Resultado del despertar"
+      },
+      "cuentakilometros": {
+        "name": "Cuentakilómetros"
+      },
+      "puerto_de_carga_rapida": {
+        "name": "Puerto de carga rápida"
+      },
+      "presion_neumatico_del_derecho": {
+        "name": "Presión neumático del. derecho"
+      },
+      "presion_neumatico_del_izquierdo": {
+        "name": "Presión neumático del. izquierdo"
+      },
+      "presion_neumatico_tras_derecho": {
+        "name": "Presión neumático tras. derecho"
+      },
+      "presion_neumatico_tras_izquierdo": {
+        "name": "Presión neumático tras. izquierdo"
+      },
+      "estado_de_carga_programada": {
+        "name": "Estado de carga programada"
+      },
+      "estado_de_carga": {
+        "name": "Estado de carga"
+      },
+      "estado_de_la_sesion": {
+        "name": "Estado de la sesión"
+      },
+      "temperatura_neumatico_del_derecho": {
+        "name": "Temperatura neumático del. derecho"
+      },
+      "temperatura_neumatico_del_izquierdo": {
+        "name": "Temperatura neumático del. izquierdo"
+      },
+      "temperatura_neumatico_tras_derecho": {
+        "name": "Temperatura neumático tras. derecho"
+      },
+      "temperatura_neumatico_tras_izquierdo": {
+        "name": "Temperatura neumático tras. izquierdo"
+      },
+      "temperatura_fijada_derecha": {
+        "name": "Temperatura fijada derecha"
+      },
+      "temperatura_fijada_izquierda": {
+        "name": "Temperatura fijada izquierda"
+      },
+      "tiempo_de_carga_restante": {
+        "name": "Tiempo de carga restante"
+      },
+      "tension_bateria_at": {
+        "name": "Tensión batería AT"
+      },
+      "estado_del_techo": {
+        "name": "Estado del techo"
+      },
+      "ultima_ubicacion": {
+        "name": "Última ubicación"
+      },
+      "ultimo_despertar": {
+        "name": "Último despertar"
+      },
+      "ultimo_contacto": {
+        "name": "Último contacto"
+      },
+      "velocidad": {
+        "name": "Velocidad"
+      }
+    },
+    "switch": {
+      "actualizacion_automatica": {
+        "name": "Actualización automática"
+      },
+      "limitar_carga_al_porcentaje": {
+        "name": "Limitar carga al porcentaje"
+      },
+      "alarma": {
+        "name": "Alarma"
+      },
+      "carga_programada": {
+        "name": "Carga programada"
+      },
+      "calefaccion_de_la_luneta": {
+        "name": "Calefacción de la luneta"
+      },
+      "calefaccion_asiento_conductor": {
+        "name": "Calefacción asiento conductor"
+      },
+      "calefaccion_asiento_pasajero": {
+        "name": "Calefacción asiento pasajero"
+      },
+      "calefaccion_asiento_tras_derecho": {
+        "name": "Calefacción asiento tras. derecho"
+      },
+      "calefaccion_asiento_tras_izquierdo": {
+        "name": "Calefacción asiento tras. izquierdo"
+      },
+      "calefaccion_del_volante": {
+        "name": "Calefacción del volante"
+      },
+      "desempanado_del_parabrisas": {
+        "name": "Desempañado del parabrisas"
+      },
+      "ventilacion_asiento_conductor": {
+        "name": "Ventilación asiento conductor"
+      },
+      "ventilacion_asiento_pasajero": {
+        "name": "Ventilación asiento pasajero"
+      },
+      "ventilacion_asiento_tras_derecho": {
+        "name": "Ventilación asiento tras. derecho"
+      },
+      "ventilacion_asiento_tras_izquierdo": {
+        "name": "Ventilación asiento tras. izquierdo"
+      }
+    },
+    "time": {
+      "hora_de_inicio_de_la_carga": {
+        "name": "Hora de inicio de la carga"
+      },
+      "duracion_de_la_carga": {
+        "name": "Duración de la carga"
+      }
+    }
+  }
+}

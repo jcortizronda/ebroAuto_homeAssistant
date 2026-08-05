@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""
+probe.py — "Sonda de posición" de Ebro Auto.
+
+Pregunta que responde: cuando el coche está REALMENTE despierto (está publicando
+5A02 en MQTT), ¿el canal tspconsole-eu devuelve posición GPS / datos realtime, o
+todavía `A07900`?
+
+Descubrimiento (verificado sobre el código de AMBAS apps, EU + rusa):
+  - NO existe un endpoint BFF para los comandos. El BFF "legend" solo tiene
+    auth/cpm(PIN)/env/map/vac/vmc. Los comandos/posición pasan TODOS por el SDK
+    de Chery → tspconsole-eu `/asc/vehicleControl/*` y `/asr/manager/realtime`,
+    es decir EXACTAMENTE los path que ya usamos. Ningún canal oculto.
+  - Así que la única variable que queda es el ESTADO DESPIERTO del coche. La app
+    lo consigue porque manda con el coche recién usado; nosotros caemos en A07900
+    (duerme) y no podemos despertarlo (smsAwaken en A07312, cuota por cuenta).
+
+Esta sonda es de SOLO LECTURA: llama a `/asr/manager/realtime {vin}` y
+`/asc/vehicleControl/queryVehicleLocation {vin}` (los mismos del sondeo de
+wake.py). NO envía smsAwaken, NO manda comandos, NO toca el PIN. Es benigna:
+es lo que hace la app cuando abres la página de "posición".
+
+Se invoca en el flanco de subida dormido→despierto, con un cooldown para no
+repetir en cada 5A02.
+
+Uso estrictamente personal (coche/cuenta del usuario). NO publicar token/certificados.
+"""
+import json
+import os
+import time
+
+# Reutiliza la infraestructura ya verificada de wake.py: login BFF + POST firmado tspconsole.
+# imports relativos de paquete.
+from . import codes, wake as W
+
+# campos "ricos" del CVRealtimeResBean que más nos interesan (si es que llegan)
+RICH_KEYS = ("lat", "lon", "altitude", "direction", "gpsSpeed", "vehicleSpeed",
+             "odometer", "dumpEnergy", "electricRange", "pureElectricRange",
+             "chargeState", "inCarTemperature", "onlineStatus")
+
+# Subconjunto GEOGRÁFICO de RICH_KEYS: la POSICIÓN. Excluido del mensaje legible —
+# no de la telemetría. El mensaje `probe_status` acaba en el estado de un sensor (y por
+# tanto en la base de datos de HA), en el archivo «Descargar diagnóstico» y en el log de la
+# integración; escribir ahí «lat=…, lon=…» hacía salir en claro dónde está el coche en los
+# tres sitios (encontrado en campo el 2026-07-20). La posición sigue llegando al
+# device_tracker por su camino (`on_data` recibe los datos EN CRUDO, no este resumen), así
+# que no se pierde nada: solo desaparece del TEXTO. Odómetro/energía/autonomía/temperatura
+# se quedan, para que el mensaje siga siendo útil para el diagnóstico.
+_GEO_KEYS = ("lat", "lon", "altitude", "direction")
+_MSG_KEYS = tuple(k for k in RICH_KEYS if k not in _GEO_KEYS)
+
+
+def _log(path: str, rec: dict):
+    if not path:
+        return
+    rec = {"ts": round(time.time(), 3),
+           "iso": time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime()), **rec}
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
+def _rich(data: dict) -> dict:
+    """Extrae los campos interesantes para el resumen legible — SIN la posición.
+
+    Ver `_GEO_KEYS`: las coordenadas no entran en el mensaje (que se publica como estado de
+    un sensor, por tanto persistido y potencialmente compartido). Quedan todos los demás
+    campos ricos. La posición viaja igualmente intacta hacia el device_tracker mediante
+    `on_data`, que recibe el diccionario en crudo, no este."""
+    if not isinstance(data, dict):
+        return {}
+    return {k: data[k] for k in _MSG_KEYS if k in data}
+
+
+def probe_once(ctx, publish, force=False, on_data=None):
+    """Ejecuta UNA sonda de solo lectura y reporta el resultado vía `publish(text)`.
+
+    `ctx` = CoreCtx del vehículo: VIN, host, token y cooldown de la sonda. Antes eran
+    globales de módulo, así que con dos coches configurados la sonda de uno consumía el
+    cooldown del otro — y leía igualmente el VIN de la última entrada arrancada.
+
+    Devuelve un dict {ok, online, got_data, codes, rich}. Nunca lanza.
+    `force=True` ignora el cooldown (para la prueba manual).
+    `on_data(data)` (opcional): callback invocada con el dict `data` en crudo SOLO cuando
+    se reciben datos en vivo (coche despierto) — se usa para publicar GPS/batería en HA.
+    """
+    if not ctx.state.probe_lock.acquire(blocking=False):
+        return {"ok": False, "reason": "busy"}
+    try:
+        now = time.time()
+        last_probe = ctx.state.last_probe_ts
+        if not force and last_probe and (now - last_probe) < ctx.probe_cooldown_s:
+            return {"ok": False, "reason": "cooldown",
+                    "wait_s": int(ctx.probe_cooldown_s - (now - last_probe))}
+        ctx.state.last_probe_ts = now
+
+        publish("🛰️ Sonda de posición: el coche está despierto, intento leer GPS/tiempo real…")
+        ut, _tu = W._bff_login(ctx)
+        if not ut:
+            publish("🔑 Sonda: sesión caducada (vuelve a autenticarte). Reintento al próximo despertar")
+            _log(ctx.probe_log_path, {"event": "probe", "ok": False, "reason": "no_usertoken"})
+            return {"ok": False, "reason": "no_usertoken"}
+
+        _sc1, j1 = W._signed_post(ctx, ut, "/asr/manager/realtime", {"vin": ctx.vin})
+        _sc2, j2 = W._signed_post(ctx, ut, "/asc/vehicleControl/queryVehicleLocation",
+                                 {"vin": ctx.vin})
+        # travelQuery: buscamos km/odómetro (campo aún no visto; se revelará en el 1er wake real)
+        _sc3, j3 = W._signed_post(ctx, ut, "/asd/travelManage/travelQuery", {"vin": ctx.vin})
+        c1, c2, c3 = W._code_of(j1), W._code_of(j2), W._code_of(j3)
+        got1, got2, got3 = W._has_live_data(j1), W._has_live_data(j2), W._has_live_data(j3)
+
+        # data combinado: realtime tiene prioridad (lat/lon/batería), travel/location añaden campos extra.
+        # El payload está bajo "data" o "body" según el endpoint (realtime → "body"): W._payload
+        # maneja ambos, si no los 84 campos realtime se perdían.
+        data = {}
+        for src, got in ((j2, got2), (j3, got3), (j1, got1)):
+            payload = W._payload(src)
+            if got and isinstance(payload, dict):
+                data.update(payload)
+        rich = _rich(data)
+        _log(ctx.probe_log_path, {"event": "probe", "ok": True, "realtime_code": c1, "location_code": c2,
+              "travel_code": c3, "got_realtime": got1, "got_location": got2, "got_travel": got3,
+              "rich": rich, "data": data or None,
+              "travel_data": j3.get("data") if got3 else None})
+
+        got1 = got1 or got3   # si travelQuery trae datos con el coche despierto, cuenta como "live"
+        if (got1 or got2) and on_data and data:
+            try:
+                on_data(data)
+            except Exception as e:
+                publish(f"⚠️ Sonda: error al publicar datos ({type(e).__name__})")
+
+        if got1 or got2:
+            if rich:
+                bits = ", ".join(f"{k}={v}" for k, v in rich.items())
+                publish(f"🟢🛰️ ¡Datos en tiempo real recibidos con el coche despierto! {bits}")
+            else:
+                publish("🟢🛰️ Sonda: datos recibidos con el coche despierto")
+            return {"ok": True, "online": True, "got_data": True,
+                    "codes": [c1, c2, c3], "rich": rich}
+
+        publish(f"🟡 Sonda: aún sin posición con el coche despierto "
+                f"(realtime={c1} [{codes.meaning(c1)}], location={c2}, travel={c3}). "
+                "Confirmado: hace falta otro paso")
+        return {"ok": True, "online": False, "got_data": False, "codes": [c1, c2, c3]}
+    except Exception as e:
+        publish(f"⚠️ Error de sonda: {type(e).__name__}: {e}")
+        return {"ok": False, "reason": "exception", "error": str(e)}
+    finally:
+        ctx.state.probe_lock.release()

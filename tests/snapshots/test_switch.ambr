@@ -1,0 +1,781 @@
+# serializer version: 1
+# name: test_entities[switch.ebro_0001_actualizacion_automatica-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'switch.ebro_0001_actualizacion_automatica',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:autorenew',
+    'original_name': 'Actualización automática',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_actualizacion_automatica',
+    'supported_features': 0,
+    'translation_key': 'actualizacion_automatica',
+    'unique_id': 'LSJA0000000000001_polling_auto',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_actualizacion_automatica-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Actualización automática',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:autorenew',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_actualizacion_automatica',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_alarma-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': None,
+    'entity_id': 'switch.ebro_0001_alarma',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:shield-car',
+    'original_name': 'Alarma',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_alarma',
+    'supported_features': 0,
+    'translation_key': 'alarma',
+    'unique_id': 'LSJA0000000000001_alarma',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_alarma-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Alarma',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:shield-car',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_alarma',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'on',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_calefaccion_asiento_conductor-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': None,
+    'entity_id': 'switch.ebro_0001_calefaccion_asiento_conductor',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:car-seat-heater',
+    'original_name': 'Calefacción asiento conductor',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_calefaccion_asiento_conductor',
+    'supported_features': 0,
+    'translation_key': 'calefaccion_asiento_conductor',
+    'unique_id': 'LSJA0000000000001_dSeatHeatingState',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_calefaccion_asiento_conductor-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Calefacción asiento conductor',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:car-seat-heater',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_calefaccion_asiento_conductor',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'on',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_calefaccion_asiento_pasajero-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': None,
+    'entity_id': 'switch.ebro_0001_calefaccion_asiento_pasajero',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:car-seat-heater',
+    'original_name': 'Calefacción asiento pasajero',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_calefaccion_asiento_pasajero',
+    'supported_features': 0,
+    'translation_key': 'calefaccion_asiento_pasajero',
+    'unique_id': 'LSJA0000000000001_pSeatHeatingState',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_calefaccion_asiento_pasajero-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Calefacción asiento pasajero',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:car-seat-heater',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_calefaccion_asiento_pasajero',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_calefaccion_asiento_tras_derecho-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': None,
+    'entity_id': 'switch.ebro_0001_calefaccion_asiento_tras_derecho',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:car-seat-heater',
+    'original_name': 'Calefacción asiento tras. derecho',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_calefaccion_asiento_tras_derecho',
+    'supported_features': 0,
+    'translation_key': 'calefaccion_asiento_tras_derecho',
+    'unique_id': 'LSJA0000000000001_rSeatHeatingState2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_calefaccion_asiento_tras_derecho-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Calefacción asiento tras. derecho',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:car-seat-heater',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_calefaccion_asiento_tras_derecho',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_calefaccion_asiento_tras_izquierdo-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': None,
+    'entity_id': 'switch.ebro_0001_calefaccion_asiento_tras_izquierdo',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:car-seat-heater',
+    'original_name': 'Calefacción asiento tras. izquierdo',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_calefaccion_asiento_tras_izquierdo',
+    'supported_features': 0,
+    'translation_key': 'calefaccion_asiento_tras_izquierdo',
+    'unique_id': 'LSJA0000000000001_lSeatHeatingState2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_calefaccion_asiento_tras_izquierdo-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Calefacción asiento tras. izquierdo',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:car-seat-heater',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_calefaccion_asiento_tras_izquierdo',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'on',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_calefaccion_de_la_luneta-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': None,
+    'entity_id': 'switch.ebro_0001_calefaccion_de_la_luneta',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:car-defrost-rear',
+    'original_name': 'Calefacción de la luneta',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_calefaccion_de_la_luneta',
+    'supported_features': 0,
+    'translation_key': 'calefaccion_de_la_luneta',
+    'unique_id': 'LSJA0000000000001_rWinHeatingState',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_calefaccion_de_la_luneta-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Calefacción de la luneta',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:car-defrost-rear',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_calefaccion_de_la_luneta',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'on',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_calefaccion_del_volante-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': None,
+    'entity_id': 'switch.ebro_0001_calefaccion_del_volante',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:steering',
+    'original_name': 'Calefacción del volante',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_calefaccion_del_volante',
+    'supported_features': 0,
+    'translation_key': 'calefaccion_del_volante',
+    'unique_id': 'LSJA0000000000001_steerWheelHeating',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_calefaccion_del_volante-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Calefacción del volante',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:steering',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_calefaccion_del_volante',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'on',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_carga_programada-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': None,
+    'entity_id': 'switch.ebro_0001_carga_programada',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:calendar-clock',
+    'original_name': 'Carga programada',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_carga_programada',
+    'supported_features': 0,
+    'translation_key': 'carga_programada',
+    'unique_id': 'LSJA0000000000001_carga_programada',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_carga_programada-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Carga programada',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:calendar-clock',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_carga_programada',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'on',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_desempanado_del_parabrisas-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': None,
+    'entity_id': 'switch.ebro_0001_desempanado_del_parabrisas',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:car-defrost-front',
+    'original_name': 'Desempañado del parabrisas',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_desempanado_del_parabrisas',
+    'supported_features': 0,
+    'translation_key': 'desempanado_del_parabrisas',
+    'unique_id': 'LSJA0000000000001_frontWindshieldHeat',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_desempanado_del_parabrisas-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Desempañado del parabrisas',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:car-defrost-front',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_desempanado_del_parabrisas',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_limitar_carga_al_porcentaje-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'switch.ebro_0001_limitar_carga_al_porcentaje',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:battery-charging-80',
+    'original_name': 'Limitar carga al porcentaje',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_limitar_carga_al_porcentaje',
+    'supported_features': 0,
+    'translation_key': 'limitar_carga_al_porcentaje',
+    'unique_id': 'LSJA0000000000001_charge_limit',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_limitar_carga_al_porcentaje-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Limitar carga al porcentaje',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:battery-charging-80',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_limitar_carga_al_porcentaje',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_ventilacion_asiento_conductor-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': None,
+    'entity_id': 'switch.ebro_0001_ventilacion_asiento_conductor',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:car-seat-cooler',
+    'original_name': 'Ventilación asiento conductor',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_ventilacion_asiento_conductor',
+    'supported_features': 0,
+    'translation_key': 'ventilacion_asiento_conductor',
+    'unique_id': 'LSJA0000000000001_dSeatVentilateState',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_ventilacion_asiento_conductor-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Ventilación asiento conductor',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:car-seat-cooler',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_ventilacion_asiento_conductor',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_ventilacion_asiento_pasajero-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': None,
+    'entity_id': 'switch.ebro_0001_ventilacion_asiento_pasajero',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:car-seat-cooler',
+    'original_name': 'Ventilación asiento pasajero',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_ventilacion_asiento_pasajero',
+    'supported_features': 0,
+    'translation_key': 'ventilacion_asiento_pasajero',
+    'unique_id': 'LSJA0000000000001_pSeatVentilateState',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_ventilacion_asiento_pasajero-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Ventilación asiento pasajero',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:car-seat-cooler',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_ventilacion_asiento_pasajero',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_ventilacion_asiento_tras_derecho-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': None,
+    'entity_id': 'switch.ebro_0001_ventilacion_asiento_tras_derecho',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:car-seat-cooler',
+    'original_name': 'Ventilación asiento tras. derecho',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_ventilacion_asiento_tras_derecho',
+    'supported_features': 0,
+    'translation_key': 'ventilacion_asiento_tras_derecho',
+    'unique_id': 'LSJA0000000000001_rSeatVentilateState2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_ventilacion_asiento_tras_derecho-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Ventilación asiento tras. derecho',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:car-seat-cooler',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_ventilacion_asiento_tras_derecho',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
+  })
+# ---
+# name: test_entities[switch.ebro_0001_ventilacion_asiento_tras_izquierdo-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': None,
+    'entity_id': 'switch.ebro_0001_ventilacion_asiento_tras_izquierdo',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': <SwitchDeviceClass.SWITCH: 'switch'>,
+    'original_icon': 'mdi:car-seat-cooler',
+    'original_name': 'Ventilación asiento tras. izquierdo',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_ventilacion_asiento_tras_izquierdo',
+    'supported_features': 0,
+    'translation_key': 'ventilacion_asiento_tras_izquierdo',
+    'unique_id': 'LSJA0000000000001_lSeatVentilateState2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.ebro_0001_ventilacion_asiento_tras_izquierdo-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'switch',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Ventilación asiento tras. izquierdo',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:car-seat-cooler',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.ebro_0001_ventilacion_asiento_tras_izquierdo',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
+  })
+# ---

@@ -1,0 +1,31 @@
+# serializer version: 1
+# name: test_dispositivo
+  DeviceRegistryEntrySnapshot({
+    'area_id': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'configuration_url': None,
+    'connections': set({
+    }),
+    'disabled_by': None,
+    'entry_type': None,
+    'hw_version': None,
+    'id': <ANY>,
+    'identifiers': set({
+      tuple(
+        'ebro',
+        'LSJA0000000000001',
+      ),
+    }),
+    'labels': set({
+    }),
+    'manufacturer': 'Ebro',
+    'model': 'S900',
+    'model_id': None,
+    'name': 'Ebro S900',
+    'name_by_user': None,
+    'serial_number': None,
+    'sw_version': None,
+    'via_device_id': None,
+  })
+# ---

@@ -1,0 +1,8 @@
+# serializer version: 1
+# name: test_vectores_dorados
+  dict({
+    'anidado': '5FD9CJJ/D74XJK6+XWNCXRC+FVX1BLEQEJ3IIS99UDM=',
+    'escalares': 'IIY5N3RG8/IVSJLTBIDIESWZ44H3T7F1GYHKK+VTOZK=',
+    'plano': 'P2VG4N5BWMHJWHUC2WDS50SHUFKFHKHWOIP9UZFGB1Q=',
+  })
+# ---

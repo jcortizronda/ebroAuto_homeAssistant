@@ -1,0 +1,59 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = [".git", ".venv-test"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+# ─────────────────────────────── ruff ───────────────────────────────
+# Ruleset alineado con el de Home Assistant core, con dos concesiones al proyecto:
+# la línea es de 100 (el código y sus comentarios explicativos ya están escritos así) y los
+# docstrings van en castellano, así que no se exige el imperativo inglés de pydocstyle.
+[tool.ruff]
+# 120, no los 88 de HA core: el proyecto documenta sus decisiones en comentarios largos junto
+# al código que explican, y ese texto ya está escrito a ~105 columnas. Reflowarlo entero para
+# ganar un número redondo no mejora nada y ensucia el `git blame` de 60 bloques de comentario.
+line-length = 120
+target-version = "py313"
+exclude = [".venv-test"]
+
+[tool.ruff.lint]
+select = [
+    "F",      # pyflakes: nombres sin definir, imports e variables sin usar
+    "E", "W", # pycodestyle
+    "I",      # isort: orden de imports
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # comprehensions
+    "SIM",    # simplificaciones
+    "RUF",    # reglas propias de ruff
+    "ASYNC",  # errores tipicos de asyncio
+    "T20",    # ningun print() suelto en el componente
+]
+ignore = [
+    # Tipografía castellana: «comillas angulares», guiones — y flechas → aparecen por todo el
+    # texto explicativo. Son deliberadas, no caracteres confundibles colados por error.
+    "RUF001", "RUF002", "RUF003",
+]
+
+[tool.ruff.lint.flake8-bugbear]
+# `BLE001` (capturar Exception) NO se ignora globalmente a propósito: el componente lo hace en
+# los caminos best-effort (monitor de diagnóstico, apagado, relleno de identidad), donde un
+# fallo no debe tumbar el setup ni el hilo de paho, y cada uno lleva su `# noqa: BLE001` con el
+# motivo al lado. Ignorarlo global convertiría esos noqa en ruido y dejaría pasar los nuevos.
+extend-immutable-calls = []
+
+[tool.ruff.lint.per-file-ignores]
+# Catálogos: una entrada por línea es la forma legible de una TABLA DE DATOS (el catálogo de
+# comandos, el mapa de telemetría, las specs de sensores). Partirlas a 100 columnas las haría
+# ilegibles sin ganar nada: no son lógica, son datos alineados.
+"custom_components/ebro/core/catalog.py" = ["E501"]
+"custom_components/ebro/vehicle/telemetry.py" = ["E501"]
+"custom_components/ebro/sensor.py" = ["E501"]
+"custom_components/ebro/binary_sensor.py" = ["E501"]
+# Los tests usan nombres largos y descriptivos en castellano.
+"tests/**" = ["T20", "E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components", "tests"]
+force-sort-within-sections = true
+combine-as-imports = true

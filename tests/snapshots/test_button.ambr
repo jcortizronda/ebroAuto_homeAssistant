@@ -1,0 +1,358 @@
+# serializer version: 1
+# name: test_entities[button.ebro_0001_actualizar_estado_completo-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.ebro_0001_actualizar_estado_completo',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': 'mdi:car-info',
+    'original_name': 'Actualizar estado completo',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_actualizar_estado_completo',
+    'supported_features': 0,
+    'translation_key': 'actualizar_estado_completo',
+    'unique_id': 'LSJA0000000000001_refresh_full',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[button.ebro_0001_actualizar_estado_completo-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Actualizar estado completo',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:car-info',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.ebro_0001_actualizar_estado_completo',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_entities[button.ebro_0001_actualizar_ubicacion-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.ebro_0001_actualizar_ubicacion',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': 'mdi:crosshairs-gps',
+    'original_name': 'Actualizar ubicación',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_actualizar_ubicacion',
+    'supported_features': 0,
+    'translation_key': 'actualizar_ubicacion',
+    'unique_id': 'LSJA0000000000001_refresh_pos',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[button.ebro_0001_actualizar_ubicacion-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Actualizar ubicación',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:crosshairs-gps',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.ebro_0001_actualizar_ubicacion',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_entities[button.ebro_0001_aplicar_carga_programada-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.ebro_0001_aplicar_carga_programada',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': 'mdi:calendar-check',
+    'original_name': 'Aplicar carga programada',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_aplicar_carga_programada',
+    'supported_features': 0,
+    'translation_key': 'aplicar_carga_programada',
+    'unique_id': 'LSJA0000000000001_apply_charge_plan',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[button.ebro_0001_aplicar_carga_programada-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Aplicar carga programada',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:calendar-check',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.ebro_0001_aplicar_carga_programada',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_entities[button.ebro_0001_despertar_coche-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.ebro_0001_despertar_coche',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': 'mdi:car-connected',
+    'original_name': 'Despertar coche',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_despertar_coche',
+    'supported_features': 0,
+    'translation_key': 'despertar_coche',
+    'unique_id': 'LSJA0000000000001_wake',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[button.ebro_0001_despertar_coche-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Despertar coche',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:car-connected',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.ebro_0001_despertar_coche',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_entities[button.ebro_0001_encontrar_coche_luces-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.ebro_0001_encontrar_coche_luces',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': 'mdi:car-search',
+    'original_name': 'Encontrar coche (luces)',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_encontrar_coche_luces',
+    'supported_features': 0,
+    'translation_key': 'encontrar_coche_luces',
+    'unique_id': 'LSJA0000000000001_cmd_encontrar_coche_luces',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[button.ebro_0001_encontrar_coche_luces-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Encontrar coche (luces)',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:car-search',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.ebro_0001_encontrar_coche_luces',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_entities[button.ebro_0001_localizar_coche_gps-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.ebro_0001_localizar_coche_gps',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': 'mdi:crosshairs-gps',
+    'original_name': 'Localizar coche (GPS)',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_localizar_coche_gps',
+    'supported_features': 0,
+    'translation_key': 'localizar_coche_gps',
+    'unique_id': 'LSJA0000000000001_cmd_localizar_coche_gps',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[button.ebro_0001_localizar_coche_gps-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Localizar coche (GPS)',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:crosshairs-gps',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.ebro_0001_localizar_coche_gps',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_entities[button.ebro_0001_ventilar_ventanillas-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.ebro_0001_ventilar_ventanillas',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': 'mdi:weather-windy',
+    'original_name': 'Ventilar ventanillas',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_ventilar_ventanillas',
+    'supported_features': 0,
+    'translation_key': 'ventilar_ventanillas',
+    'unique_id': 'LSJA0000000000001_cmd_ventilar_ventanillas',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[button.ebro_0001_ventilar_ventanillas-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Ventilar ventanillas',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:weather-windy',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.ebro_0001_ventilar_ventanillas',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---

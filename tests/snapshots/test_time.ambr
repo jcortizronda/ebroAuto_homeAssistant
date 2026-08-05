@@ -1,0 +1,103 @@
+# serializer version: 1
+# name: test_entities[time.ebro_0001_duracion_de_la_carga-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'time',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'time.ebro_0001_duracion_de_la_carga',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': 'mdi:battery-clock',
+    'original_name': 'Duración de la carga',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_duracion_de_la_carga',
+    'supported_features': 0,
+    'translation_key': 'duracion_de_la_carga',
+    'unique_id': 'LSJA0000000000001_carga_duracion',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[time.ebro_0001_duracion_de_la_carga-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Duración de la carga',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:battery-clock',
+    }),
+    'context': <ANY>,
+    'entity_id': 'time.ebro_0001_duracion_de_la_carga',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '06:00:00',
+  })
+# ---
+# name: test_entities[time.ebro_0001_hora_de_inicio_de_la_carga-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'time',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'time.ebro_0001_hora_de_inicio_de_la_carga',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': 'mdi:clock-start',
+    'original_name': 'Hora de inicio de la carga',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_hora_de_inicio_de_la_carga',
+    'supported_features': 0,
+    'translation_key': 'hora_de_inicio_de_la_carga',
+    'unique_id': 'LSJA0000000000001_carga_hora_inicio',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[time.ebro_0001_hora_de_inicio_de_la_carga-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Hora de inicio de la carga',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:clock-start',
+    }),
+    'context': <ANY>,
+    'entity_id': 'time.ebro_0001_hora_de_inicio_de_la_carga',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '08:00:00',
+  })
+# ---

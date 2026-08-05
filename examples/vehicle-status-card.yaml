@@ -1,0 +1,450 @@
+# ---------------------------------------------------------------------------
+# Tarjeta de EJEMPLO para Ebro Auto con "Vehicle Status Card" de ngocjohn:
+#   https://github.com/ngocjohn/vehicle-status-card   (instalala desde HACS -> Frontend)
+#
+# COMO USARLA:
+#   1. Sustituye XXXX por los ULTIMOS 4 DIGITOS del VIN en TODAS las entidades
+#      (buscar/reemplazar: ebro_XXXX_  ->  ebro_1234_).
+#   2. Imagenes: en esta carpeta tienes 'S900_General.png' (imagen del coche) y
+#      'S900_Top.png' (vista cenital para el fondo de los neumaticos). Subelas a tu HA
+#      y asignalas en la GUI de la tarjeta (marcadas como [ENLACE A IMAGEN LOCAL...]).
+# ---------------------------------------------------------------------------
+type: custom:vehicle-status-card
+name: Ebro S900
+images:
+  - image: "[ENLACE A IMAGEN LOCAL. CONFIGURAR EN GUI DE TARJETA - sugerida: examples/S900_General.png]"
+layout_config:
+  button_grid:
+    rows: 2
+    columns: 2
+    swipe: true
+  images_swipe:
+    height: 150
+  section_order:
+    - indicators
+    - range_info
+    - images
+    - mini_map
+    - buttons
+  range_info_config:
+    layout: row
+  single_tire_card:
+    enabled: false
+  hide_card_name: false
+mini_map:
+  device_tracker: device_tracker.ebro_XXXX_ubicacion
+  enable_popup: true
+  entities:
+    - entity: device_tracker.ebro_XXXX_ubicacion
+  theme_mode: auto
+  fit_zones: false
+  user_location: false
+  hide_map_address: false
+  use_zone_name: false
+  us_format: false
+indicator_rows:
+  - row_items:
+      - entity: sensor.ebro_XXXX_cuentakilometros
+        type: entity
+        show_name: true
+        show_state: true
+        show_icon: false
+        tap_action:
+          action: more-info
+        name: Odómetro
+        show_entity_picture: false
+        row_reverse: false
+        include_state_template: false
+        column_reverse: false
+        ignore_global: false
+      - type: entity
+        show_name: true
+        show_state: true
+        show_icon: true
+        show_entity_picture: false
+        include_state_template: false
+        tap_action:
+          action: toggle
+        entity: switch.ebro_XXXX_actualizacion_automatica
+      - type: entity
+        show_name: false
+        show_state: false
+        show_icon: true
+        show_entity_picture: false
+        include_state_template: false
+        tap_action:
+          action: toggle
+        entity: button.ebro_XXXX_actualizar_ubicacion
+        name: Actualizar datos
+        color_template: >-
+          {{ 'blue' if (as_timestamp(now()) -
+          as_timestamp(states.sensor.ebro_XXXX_resultado_sonda_de_ubicacion.last_changed))
+          < 10 else '' }}
+        icon: mdi:update
+    alignment: end
+    no_wrap: true
+  - row_items:
+      - type: entity
+        show_name: true
+        show_state: true
+        show_icon: true
+        show_entity_picture: false
+        include_state_template: false
+        tap_action:
+          action: more-info
+        entity: lock.ebro_XXXX_cierre_centralizado
+        name: Cierre
+      - type: group
+        name: Accesos
+        items:
+          - entity: cover.ebro_XXXX_ventanillas
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+          - entity: cover.ebro_XXXX_techo_solar
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+          - entity: cover.ebro_XXXX_maletero
+        icon: mdi:car-key
+        show_name: true
+        show_icon: true
+      - type: group
+        name: Batería AT
+        icon: mdi:battery
+        items:
+          - entity: sensor.ebro_XXXX_tension_bateria_at
+          - entity: sensor.ebro_XXXX_corriente_bateria_at
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+        include_state_template: true
+        show_name: true
+        show_state: false
+        state_content:
+          - state_template
+        show_icon: true
+    alignment: default
+    no_wrap: true
+  - row_items:
+      - entity: climate.ebro_XXXX_climatizacion
+        type: entity
+        show_name: true
+        show_state: true
+        show_icon: true
+        tap_action:
+          action: more-info
+      - type: group
+        name: Ventilación
+        items:
+          - entity: switch.ebro_XXXX_ventilacion_asiento_conductor
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+            name: Conductor
+          - entity: switch.ebro_XXXX_ventilacion_asiento_pasajero
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+            name: Copiloto
+          - entity: switch.ebro_XXXX_ventilacion_asiento_tras_izquierdo
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+            name: Trasero Izquierdo
+          - entity: switch.ebro_XXXX_ventilacion_asiento_tras_derecho
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+            name: Trasero Derecho
+          - entity: switch.ebro_XXXX_desempanado_del_parabrisas
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+            name: Parabrisas
+          - entity: button.ebro_XXXX_ventilar_ventanillas
+            show_state: false
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+            name: Ventilar Ventanillas
+        show_name: true
+        show_state: false
+        show_icon: true
+        row_reverse: false
+        include_state_template: false
+        icon: mdi:snowflake
+      - type: group
+        name: Calefacción
+        items:
+          - entity: switch.ebro_XXXX_calefaccion_del_volante
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+            name: Volante
+          - entity: switch.ebro_XXXX_calefaccion_asiento_conductor
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+            name: Conductor
+          - entity: switch.ebro_XXXX_calefaccion_asiento_pasajero
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+            name: Copiloto
+          - entity: switch.ebro_XXXX_calefaccion_asiento_tras_derecho
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+            name: Trasero Derecho
+          - entity: switch.ebro_XXXX_calefaccion_asiento_tras_izquierdo
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+            name: Trasero Izquierdo
+          - entity: switch.ebro_XXXX_calefaccion_de_la_luneta
+            show_state: true
+            show_name: true
+            show_icon: true
+            tap_action:
+              action: more-info
+            name: Luneta Térmica
+        icon: mdi:heat-wave
+        show_name: true
+        show_state: false
+        show_icon: true
+  - row_items:
+      - type: entity
+        show_name: true
+        show_state: true
+        show_icon: true
+        show_entity_picture: false
+        include_state_template: false
+        tap_action:
+          action: more-info
+        entity: sensor.ebro_XXXX_consumo_medio_electrico
+        color_template: >-
+          {{ 'green' if is_state('binary_sensor.ebro_XXXX_alta_tension_activa',
+          'on') else '' }}
+      - type: entity
+        show_name: true
+        show_state: true
+        show_icon: true
+        show_entity_picture: false
+        include_state_template: false
+        tap_action:
+          action: more-info
+        entity: sensor.ebro_XXXX_consumo_medio_de_combustible
+        ignore_global: false
+        color_template: >-
+          {{ 'green' if is_state('binary_sensor.ebro_XXXX_motor', 'on') else ''
+          }}
+range_info:
+  - energy_level:
+      entity: sensor.ebro_XXXX_bateria
+      tap_action:
+        action: more-info
+      value_alignment: start
+      value_position: outside
+      max_value: 100
+    range_level:
+      entity: sensor.ebro_XXXX_autonomia_electrica
+      value_position: outside
+      hide_icon: false
+      icon_state_color: false
+    progress_color: "#277213"
+    charging_template: "{{ is_state('sensor.ebro_XXXX_estado_de_carga', 'Cargando') }}"
+    color_blocks: false
+    color_thresholds: []
+    charging_entity: sensor.ebro_XXXX_estado_de_carga
+    bar_height: 8
+    charge_target_entity: number.ebro_XXXX_limite_de_carga
+    charge_target_tooltip: true
+    charge_target_visibility: "{{ is_state('switch.ebro_XXXX_limitar_carga_al_porcentaje', 'on') }}"
+  - energy_level:
+      entity: sensor.ebro_XXXX_combustible_restante
+      tap_action:
+        action: more-info
+      value_alignment: start
+      value_position: outside
+      max_value: 100
+    range_level:
+      entity: sensor.ebro_XXXX_autonomia_gasolina
+      value_position: outside
+      hide_icon: false
+    progress_color: "#283ac8"
+    color_blocks: false
+    color_thresholds: []
+    bar_height: 8
+button_cards:
+  - show_icon: true
+    show_primary: true
+    show_secondary: true
+    layout: horizontal
+    button_type: default
+    tap_action:
+      action: more-info
+    card_type: default
+    icon_type: icon
+    primary_info: name
+    name: Estado del Vehículo
+    icon: mdi:car
+    transparent: true
+    secondary_multiline: false
+    sub_card:
+      default_card:
+        - title: Avisos
+          items:
+            - entity: binary_sensor.ebro_XXXX_bateria_baja
+            - entity: binary_sensor.ebro_XXXX_aviso_de_carga_necesaria
+            - entity: binary_sensor.ebro_XXXX_aviso_de_combustible_bajo
+            - entity: binary_sensor.ebro_XXXX_aviso_neumatico_del_derecho
+            - entity: binary_sensor.ebro_XXXX_aviso_neumatico_del_izquierdo
+            - entity: binary_sensor.ebro_XXXX_aviso_neumatico_tras_derecho
+            - entity: binary_sensor.ebro_XXXX_aviso_neumatico_tras_izquierdo
+          collapsed_items: true
+          state_color: true
+        - title: Ventanillas
+          items:
+            - entity: binary_sensor.ebro_XXXX_ventanilla_del_derecha
+            - entity: binary_sensor.ebro_XXXX_ventanilla_del_izquierda
+            - entity: binary_sensor.ebro_XXXX_ventanilla_tras_derecha
+            - entity: binary_sensor.ebro_XXXX_ventanilla_del_izquierda
+          collapsed_items: true
+          state_color: true
+        - title: Puertas
+          items:
+            - entity: binary_sensor.ebro_XXXX_puerta_del_izquierda
+              icon: mdi:car-door
+            - entity: binary_sensor.ebro_XXXX_puerta_del_derecha
+              icon: mdi:car-door
+            - entity: binary_sensor.ebro_XXXX_puerta_tras_izquierda
+              icon: mdi:car-door
+            - entity: binary_sensor.ebro_XXXX_puerta_tras_derecha
+              icon: mdi:car-door
+            - entity: cover.ebro_XXXX_maletero
+            - entity: binary_sensor.ebro_XXXX_capo
+          state_color: true
+          collapsed_items: true
+  - show_icon: true
+    show_primary: true
+    show_secondary: true
+    layout: horizontal
+    tap_action:
+      action: more-info
+    icon_type: icon
+    primary_info: name
+    name: Neumáticos
+    icon: mdi:tire
+    button_type: default
+    card_type: tire
+    transparent: true
+    sub_card:
+      tire_card:
+        front_left:
+          entity: sensor.ebro_XXXX_presion_neumatico_del_izquierdo
+          additional_entities:
+            - entity: sensor.ebro_XXXX_temperatura_neumatico_del_izquierdo
+          name: DEL. IZQUIERDO
+          use_custom_position: false
+        front_right:
+          entity: sensor.ebro_XXXX_presion_neumatico_del_derecho
+          additional_entities:
+            - entity: sensor.ebro_XXXX_temperatura_neumatico_del_derecho
+          name: DEL. DERECHO
+        rear_left:
+          entity: sensor.ebro_XXXX_presion_neumatico_tras_izquierdo
+          additional_entities:
+            - entity: sensor.ebro_XXXX_temperatura_neumatico_tras_izquierdo
+          name: TRAS. IZQUIERDO
+        rear_right:
+          entity: sensor.ebro_XXXX_presion_neumatico_tras_derecho
+          additional_entities:
+            - entity: sensor.ebro_XXXX_temperatura_neumatico_tras_derecho
+          name: TRAS. DERECHO
+        horizontal: true
+        hide_rotation_button: false
+        image_size: 100
+        value_size: 100
+        top: 50
+        left: 50
+        aspect_ratio: 1/1
+        # background: [ENLACE A IMAGEN LOCAL. CONFIGURAR EN GUI DE TARJETA - sugerida: examples/S900_Top.png]
+        elements: []
+  - show_icon: true
+    show_primary: true
+    show_secondary: true
+    layout: horizontal
+    tap_action:
+      action: more-info
+    card_type: default
+    icon_type: icon
+    primary_info: name
+    name: Carga
+    button_type: default
+    icon: mdi:ev-plug-type2
+    transparent: true
+    secondary_multiline: true
+    sub_card:
+      default_card:
+        - title: Estado de Carga
+          items:
+            - entity: binary_sensor.ebro_XXXX_cable_de_carga_conectado
+            - entity: sensor.ebro_XXXX_puerto_de_carga_rapida
+            - entity: sensor.ebro_XXXX_estado_de_carga
+            - entity: sensor.ebro_XXXX_estado_de_carga_programada
+            - entity: sensor.ebro_XXXX_tiempo_de_carga_restante
+          state_color: true
+        - title: Configuración de Carga
+          items:
+            - entity: switch.ebro_XXXX_carga_programada
+            - entity: time.ebro_XXXX_hora_de_inicio_de_la_carga
+            - entity: time.ebro_XXXX_duracion_de_la_carga
+            - entity: button.ebro_XXXX_aplicar_carga_programada
+            - entity: switch.ebro_XXXX_limitar_carga_al_porcentaje
+            - entity: number.ebro_XXXX_limite_de_carga
+          state_color: true
+  - show_icon: true
+    show_primary: true
+    show_secondary: true
+    layout: horizontal
+    button_type: action
+    tap_action:
+      action: more-info
+    card_type: default
+    icon_type: icon
+    primary_info: name
+    entity: sensor.ebro_XXXX_ultima_ubicacion
+    transparent: true
+    secondary_multiline: true
+    include_state_template: true
+    state_content:
+      - state_template
+    icon: mdi:crosshairs
