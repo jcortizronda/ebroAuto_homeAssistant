@@ -64,9 +64,9 @@ class PinLockout:
         with lockout.attempt() as intento:        # lanza PinLockedError si está bloqueado
             respuesta = llama_backend()           # serializado: un intento cada vez
             if respuesta.taskid:
-                intento.exito()
+                intento.success()
             elif es_culpa_del_pin(respuesta):
-                intento.fallido()
+                intento.record_failure()
             # ninguna declaración = el intento no cuenta (red, permisos, sesión)
     """
 

@@ -56,9 +56,6 @@ FAILURE_CODES = routing.FAILURE_CODES
 RETRYABLE_CODES = routing.RETRYABLE_CODES
 
 
-
-# anti-bloqueo: para tras N checkPassword fallidos consecutivos dentro de una ventana, para no
-
 def send(ctx, cmd_key, emit=lambda m: None, params=None):
     """Envía un comando. emit(str) recibe los pasos (para publicarlos en HA).
        `params` (opcional) = override/añadidos al body del catálogo ANTES de los campos comunes
