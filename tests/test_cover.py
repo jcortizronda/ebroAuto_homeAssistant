@@ -141,3 +141,20 @@ async def test_optimismo_al_abrir(hass: HomeAssistant) -> None:
 
     assert coordinator.data["fields"]["sunroofState"] == "0"  # el coche aún no ha hablado
     assert hass.states.get(TECHO).state == STATE_OPEN
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_la_sonda_actualiza_el_maletero_con_el_coche_dormido(hass: HomeAssistant) -> None:
+    """Mismo fallo que en el cierre: sin push MQTT, el maletero solo puede saberse por la
+    sonda. Aquí importa además que la lectura es por CLAVE — la cover agrega varios campos y
+    antes leía el bloque `fields` entero de una vez."""
+    coordinator = get_coordinator(hass)
+
+    coordinator._apply_update({"fields": {}, "awake": False, "realtime": {"trunkDoor": "0"}})
+    await hass.async_block_till_done()
+    assert hass.states.get(MALETERO).state == STATE_CLOSED
+
+    coordinator._apply_update({"realtime": {"trunkDoor": "1"}})
+    await hass.async_block_till_done()
+
+    assert hass.states.get(MALETERO).state == STATE_OPEN

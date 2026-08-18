@@ -20,7 +20,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .entity import EbroEntity, EbroOptimisticMixin, EbroRestoreStateMixin
-from .helpers import field_on, fields
+from .helpers import field, field_on
 from .models import EbroConfigEntry
 
 
@@ -59,9 +59,10 @@ class EbroCover(EbroOptimisticMixin, EbroRestoreStateMixin, EbroEntity, CoverEnt
         self._attr_icon = icon
 
     def _live_closed(self) -> bool | None:
-        current = fields(self.coordinator.data)
         # field_on por cada campo: None=ausente, True=abierto. Alinea "0.0" con el resto.
-        states = [field_on(current.get(k)) for k in self._keys]
+        # `field` mira MQTT y, si ahí no está, la sonda realtime: con el coche dormido esa es
+        # la única fuente, y sin ella el maletero se quedaba congelado.
+        states = [field_on(field(self.coordinator.data, k)) for k in self._keys]
         if all(s is None for s in states):
             return None  # ningún campo conocido → emerge restored/unknown
         return not any(states)  # al menos uno abierto → cover abierta

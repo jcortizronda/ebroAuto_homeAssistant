@@ -197,3 +197,19 @@ async def test_error_con_mensaje_propio(hass: HomeAssistant) -> None:
 
     # el optimismo se anula → vuelve al estado real (encendido)
     assert hass.states.get(ENTITY_ID).state == HVACMode.HEAT_COOL
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_la_sonda_actualiza_el_clima_con_el_coche_dormido(hass: HomeAssistant) -> None:
+    """`frontHVACState` viene en la sonda igual que en el push. Sin canal MQTT era el tercer
+    estado que el usuario veía congelado, junto al cierre y el maletero."""
+    coordinator = get_coordinator(hass)
+
+    coordinator._apply_update({"fields": {}, "awake": False, "realtime": {"frontHVACState": "0"}})
+    await hass.async_block_till_done()
+    assert hass.states.get(ENTITY_ID).state == HVACMode.OFF
+
+    coordinator._apply_update({"realtime": {"frontHVACState": "1"}})
+    await hass.async_block_till_done()
+
+    assert hass.states.get(ENTITY_ID).state == HVACMode.HEAT_COOL

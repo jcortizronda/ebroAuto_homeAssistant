@@ -102,13 +102,36 @@ def fields(data: Mapping[str, Any] | None) -> dict[str, Any]:
 
 
 def field(data: Mapping[str, Any] | None, key: str) -> Any:
-    """Un campo de la telemetría 5A02, o `None` si aún no ha llegado.
+    """El estado de un campo del vehículo, mirando LOS DOS canales.
 
-    Es el hermano de `realtime_field` para el otro canal. Estaba escrito a mano —
-    `coordinator.data.get("fields", {}).get(key)` — en nueve sitios entre las plataformas, el
-    coordinator y el informe de diagnóstico.
+    El coche informa de las mismas claves por dos vías distintas:
+
+    * los push **5A02 por MQTT**, que solo llegan mientras el coche está despierto;
+    * la respuesta de la **sonda realtime**, una foto completa que se puede pedir en cualquier
+      momento.
+
+    Estas entidades leían solo la primera. Con un coche que empuja por MQTT no se nota, pero con
+    uno que no lo hace —aparcado, o con la app oficial ocupando la única sesión que la nube de
+    Chery concede por cuenta— cierre, clima, puertas y maletero se quedan congelados en el
+    último valor conocido aunque la sonda esté trayendo el dato correcto en cada lectura.
+
+    **Cuál manda depende de si el coche está despierto**, no de un orden fijo, porque `fields`
+    se acumula y NUNCA se vacía:
+
+    * despierto → el push es lo más fresco que hay, y la sonda rellena lo que no venga en él;
+    * dormido → lo que queda en `fields` es del último rato que estuvo despierto, así que el
+      valor bueno es el de la sonda y el push solo cubre los huecos.
+
+    Sin esa condición, cualquiera de los dos órdenes fijos deja una entidad mintiendo: MQTT
+    primero congela al coche dormido, realtime primero congela al coche en marcha entre sondas.
     """
-    return fields(data).get(key)
+    primary, secondary = (fields(data), realtime(data))
+    if not (data or {}).get("awake"):
+        primary, secondary = secondary, primary
+    value = primary.get(key)
+    if value is None:
+        value = secondary.get(key)
+    return value
 
 
 def realtime_field(data: Mapping[str, Any] | None, field_name: str) -> str | None:

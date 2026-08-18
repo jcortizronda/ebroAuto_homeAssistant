@@ -116,3 +116,24 @@ async def test_un_comando_fallido_anula_el_optimismo(hass: HomeAssistant) -> Non
         )
 
     assert hass.states.get(ENTITY_ID).state == "locked"
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_la_sonda_actualiza_el_cierre_con_el_coche_dormido(hass: HomeAssistant) -> None:
+    """Reproduce el fallo reportado en vivo: MQTT sin entregar un solo mensaje (`fields`
+    vacío, `last_seen` nulo) mientras la sonda realtime traía `doorLock` en cada lectura. El
+    cierre se quedaba en el último valor conocido y la app oficial sí mostraba el cambio.
+
+    Que MQTT no entregue nada no es raro: la nube de Chery admite UNA sesión por cuenta, así
+    que con la app oficial abierta el canal push de la integración se queda seco."""
+    coordinator = get_coordinator(hass)
+
+    coordinator._apply_update({"fields": {}, "awake": False, "realtime": {"doorLock": "0"}})
+    await hass.async_block_till_done()
+    assert hass.states.get(ENTITY_ID).state == "locked"
+
+    # el usuario abre el coche con la llave → la siguiente sonda lo trae
+    coordinator._apply_update({"realtime": {"doorLock": "1"}})
+    await hass.async_block_till_done()
+
+    assert hass.states.get(ENTITY_ID).state == "unlocked"

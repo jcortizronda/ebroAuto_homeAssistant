@@ -140,6 +140,14 @@ los executors y el bucle de eventos. `VehicleState` no expone sus dicts, devuelv
 `record_message()` resuelve los campos y el flanco de despertar en la misma operación, porque
 leerlos por separado deja una ventana en la que el flanco se pierde.
 
+**Los dos canales traen las mismas claves, y cuál manda depende del coche.** `doorLock`,
+`trunkDoor`, `frontHVACState` y las puertas vienen tanto en el push 5A02 como en la sonda
+realtime. `helpers.field()` prefiere el push mientras el coche está despierto y la sonda cuando
+está dormido: `fields` se acumula y nunca se vacía, así que con el coche parado lo que queda ahí
+es historia. Cualquiera de los dos órdenes fijos deja una entidad mintiendo — leer solo el push
+congelaba el cierre y el maletero en cuanto MQTT se quedaba seco, que es lo que pasa con la app
+oficial abierta.
+
 **El sondeo no tiene intervalo fijo.** Cargando, enchufado, en marcha, en marcha detenido y
 parado tienen ritmos distintos; parado, por defecto, significa no tocar el coche. El bucle se
 auto-reprograma, así que `PollController.schedule_next()` es el único sitio donde puede
@@ -167,7 +175,7 @@ diff antes.
 
 ```bash
 cd my_develops/ebroAuto_homeAssistant
-.venv-test/bin/pytest tests/ -n 4          # 620 tests, 270 snapshots
+.venv-test/bin/pytest tests/ -n 4          # 628 tests, 270 snapshots
 .venv-test/bin/ruff check custom_components tests
 ```
 
