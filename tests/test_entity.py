@@ -12,6 +12,7 @@ from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN, SERVICE_UNLOCK
 from homeassistant.const import ATTR_ENTITY_ID, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.util import dt as dt_util
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -174,10 +175,9 @@ def test_el_entity_id_no_depende_de_las_traducciones() -> None:
 
 
 @pytest.mark.usefixtures("init_integration")
-async def test_el_optimismo_se_ancla_en_last_seen(hass: HomeAssistant) -> None:
-    """Un comando ACTÚA ya sobre el coche, pero el estado real solo vuelve por MQTT y con el
-    coche despierto — puede quedarse quieto durante horas. El objetivo se muestra de
-    inmediato y se mantiene hasta que llega un mensaje NUEVO del coche.
+async def test_el_optimismo_cede_ante_un_push_del_coche(hass: HomeAssistant) -> None:
+    """Un comando ACTÚA ya sobre el coche, pero el estado real tarda: el objetivo se muestra
+    de inmediato y se mantiene hasta que el coche cuenta algo nuevo.
     """
     coordinator = get_coordinator(hass)
     entidad = hass.data["entity_components"][LOCK_DOMAIN].get_entity(
@@ -193,7 +193,7 @@ async def test_el_optimismo_se_ancla_en_last_seen(hass: HomeAssistant) -> None:
         )
 
     assert entidad._opt_value is False
-    assert entidad._opt_anchor == coordinator.data["last_seen"]
+    assert entidad._opt_anchor == (coordinator.data["last_seen"], coordinator.data["car_data_ts"])
 
     # telemetría nueva (last_seen avanza) → la verdad vuelve a ser el campo real
     coordinator._apply_update(
@@ -230,3 +230,36 @@ async def test_una_actualizacion_sin_datos_nuevos_conserva_el_optimismo(
 
     assert entidad._opt_value is False
     assert hass.states.get("lock.ebro_0001_cierre_centralizado").state == "unlocked"
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_el_optimismo_cede_ante_una_sonda_con_datos_nuevos(
+    hass: HomeAssistant,
+) -> None:
+    """La sonda realtime también es verdad, y anclarse solo a `last_seen` dejaba el objetivo
+    clavado PARA SIEMPRE en un coche que no empuja por MQTT: el maletero se quedaba en
+    «abierto» desde el comando aunque después se cerrara, sin nada capaz de desmentirlo.
+
+    `car_data_ts` avanza solo cuando el contenido de la sonda cambia de verdad — por eso una
+    lectura idéntica (el test de arriba) no descarta el objetivo y esta sí."""
+    coordinator = get_coordinator(hass)
+    entidad = hass.data["entity_components"][LOCK_DOMAIN].get_entity(
+        "lock.ebro_0001_cierre_centralizado"
+    )
+
+    with patch.object(coordinator, "async_send_command", AsyncMock(return_value="ok")):
+        await hass.services.async_call(
+            LOCK_DOMAIN,
+            SERVICE_UNLOCK,
+            {ATTR_ENTITY_ID: "lock.ebro_0001_cierre_centralizado"},
+            blocking=True,
+        )
+
+    assert entidad._opt_value is False
+
+    # sonda con contenido distinto al de la lectura anterior, sin un solo mensaje MQTT
+    coordinator._apply_update({"car_data_ts": dt_util.utcnow()})
+    await hass.async_block_till_done()
+
+    assert entidad._opt_value is None
+    assert hass.states.get("lock.ebro_0001_cierre_centralizado").state == "locked"

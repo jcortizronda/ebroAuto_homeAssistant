@@ -148,6 +148,11 @@ es historia. Cualquiera de los dos órdenes fijos deja una entidad mintiendo —
 congelaba el cierre y el maletero en cuanto MQTT se quedaba seco, que es lo que pasa con la app
 oficial abierta.
 
+**El estado optimista caduca con la verdad, venga por donde venga.** Tras un comando la
+entidad muestra el objetivo, porque el coche tarda en confirmar. Ese objetivo cede en cuanto
+llega un push MQTT (`last_seen`) **o** una sonda con contenido distinto (`car_data_ts`).
+Anclarlo solo a MQTT dejaba el objetivo clavado para siempre en un coche que no empuja.
+
 **El sondeo no tiene intervalo fijo.** Cargando, enchufado, en marcha, en marcha detenido y
 parado tienen ritmos distintos; parado, por defecto, significa no tocar el coche. El bucle se
 auto-reprograma, así que `PollController.schedule_next()` es el único sitio donde puede
@@ -175,7 +180,7 @@ diff antes.
 
 ```bash
 cd my_develops/ebroAuto_homeAssistant
-.venv-test/bin/pytest tests/ -n 4          # 628 tests, 270 snapshots
+.venv-test/bin/pytest tests/ -n 4          # 629 tests, 270 snapshots
 .venv-test/bin/ruff check custom_components tests
 ```
 

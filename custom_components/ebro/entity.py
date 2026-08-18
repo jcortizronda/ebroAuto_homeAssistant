@@ -105,10 +105,17 @@ class EbroRestoreStateMixin:
 class EbroOptimisticMixin:
     """Estado optimista para los actuadores (lock/switch/cover).
 
-    Un comando ACTÚA de inmediato sobre el coche, pero el estado real vuelve SOLO por MQTT con
-    el coche despierto: el último valor "en vivo" puede quedarse quieto durante horas. Tras una
-    acción mostramos de inmediato el estado objetivo (optimista) y lo mantenemos hasta que
-    llega un NUEVO mensaje del coche (avanza `last_seen`), que pasa a ser la verdad.
+    Un comando ACTÚA de inmediato sobre el coche, pero el estado real puede tardar: tras una
+    acción mostramos de inmediato el estado objetivo (optimista) y lo mantenemos hasta que el
+    coche cuenta algo nuevo, que pasa a ser la verdad.
+
+    «Algo nuevo» son las DOS fuentes, no solo MQTT. Anclado únicamente a `last_seen`, un coche
+    que no empuja por MQTT —la nube de Chery concede una sola sesión por cuenta, así que con la
+    app oficial abierta el canal se queda seco— dejaba el optimismo clavado PARA SIEMPRE: el
+    maletero se quedaba en «abierto» desde el comando aunque se cerrara luego, y ninguna sonda
+    podía desmentirlo. `car_data_ts` cubre ese caso; avanza solo cuando el contenido de la sonda
+    cambia de verdad, así que una lectura idéntica no descarta el objetivo.
+
     Usar como PRIMERA clase base (precede a EbroEntity en el MRO)."""
 
     _opt_value = None
@@ -116,8 +123,15 @@ class EbroOptimisticMixin:
 
     def _set_optimistic(self, value) -> None:
         self._opt_value = value
-        self._opt_anchor = self.coordinator.data.get("last_seen")
+        self._opt_anchor = self._truth_anchor()
         self.async_write_ha_state()
+
+    def _truth_anchor(self) -> tuple:
+        """Marca de «lo último que ha contado el coche», por los dos canales.
+
+        Compararla es lo que decide si el objetivo optimista sigue vigente."""
+        data = self.coordinator.data
+        return (data.get("last_seen"), data.get("car_data_ts"))
 
     def _clear_optimistic(self) -> None:
         self._opt_value = None
@@ -160,8 +174,8 @@ class EbroOptimisticMixin:
             raise self._command_error(key, err) from err
 
     def _handle_coordinator_update(self) -> None:
-        # un nuevo mensaje del coche (last_seen cambiado) invalida el optimismo
-        if self._opt_value is not None and \
-                self.coordinator.data.get("last_seen") != self._opt_anchor:
+        # el coche ha contado algo nuevo (push MQTT o sonda con contenido distinto) → el
+        # objetivo optimista deja paso a la verdad
+        if self._opt_value is not None and self._truth_anchor() != self._opt_anchor:
             self._clear_optimistic()
         super()._handle_coordinator_update()
