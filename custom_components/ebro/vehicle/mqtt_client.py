@@ -63,10 +63,11 @@ class MqttConfig:
 class EbroMqttClient:
     """Ciclo de vida del cliente paho. Todos sus métodos son BLOQUEANTES: ejecutar en executor.
 
-    Los tres callbacks se invocan **desde el hilo de paho**:
+    Los cuatro callbacks se invocan **desde el hilo de paho**:
 
     * `on_message(payload: bytes)` — un mensaje del coche, sin interpretar;
     * `on_connected(ok: bool, rc)` — resultado de un intento de conexión;
+    * `on_subscribed(ok: bool, detail)` — resultado del SUBSCRIBE;
     * `on_disconnected(rc)` — la sesión se ha caído.
     """
 
@@ -77,11 +78,13 @@ class EbroMqttClient:
         on_message: Callable[[bytes], None],
         on_connected: Callable[[bool, object], None],
         on_disconnected: Callable[[object], None],
+        on_subscribed: Callable[[bool, str], None] = lambda ok, detail: None,
     ) -> None:
         self._config = config
         self._on_message = on_message
         self._on_connected = on_connected
         self._on_disconnected = on_disconnected
+        self._on_subscribed = on_subscribed
         self._client = None
 
     @property
@@ -120,11 +123,33 @@ class EbroMqttClient:
             rc = args[1] if len(args) > 1 else (args[0] if args else None)
             self._on_disconnected(rc)
 
+        def _on_subscribe(_cl, _userdata, _mid, reason_codes, _props=None):
+            """Resultado del SUBSCRIBE. Un broker puede ACEPTAR la conexión y DENEGAR el topic.
+
+            Sin esto, ese caso es indistinguible de «el coche no ha dicho nada»: la integración
+            se queda conectada y muda para siempre, y el informe de diagnóstico enseña un
+            `car_connected: true` tranquilizador que no significa lo que parece."""
+            # MQTT 3.1.1: 0/1/2 = QoS concedido, 0x80 = rechazado. paho VERSION2 los envuelve
+            # en ReasonCode, que compara y se imprime como su valor.
+            granted = [str(rc) for rc in (reason_codes or [])]
+            ok = bool(reason_codes) and all(
+                getattr(rc, "value", rc) != 0x80 for rc in reason_codes
+            )
+            detail = ", ".join(granted) or "sin respuesta"
+            if ok:
+                _LOGGER.info("[auto] MQTT suscrito a %s (QoS %s)", cfg.topic, detail)
+            else:
+                _LOGGER.error(
+                    "[auto] MQTT SUSCRIPCIÓN RECHAZADA a %s (%s): la conexión está viva pero el "
+                    "coche no podrá entregar telemetría", cfg.topic, detail)
+            self._on_subscribed(ok, detail)
+
         def _on_message(_cl, _userdata, msg):
             self._on_message(msg.payload)
 
         client.on_connect = _on_connect
         client.on_disconnect = _on_disconnect
+        client.on_subscribe = _on_subscribe
         client.on_message = _on_message
         # [H4] backoff de reconexión: el de paho por defecto es 1 s fijo, o sea un intento por
         # segundo indefinidamente con la red caída — justo el patrón que los gateways sancionan.

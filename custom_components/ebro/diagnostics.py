@@ -145,6 +145,10 @@ async def async_get_config_entry_diagnostics(
             "session_detail": data.get("session_detail"),
             "awake": data.get("awake"),
             "car_connected": data.get("car_connected"),
+            # conectado NO es lo mismo que suscrito: el broker puede aceptar la conexión y
+            # denegar el topic, y entonces la telemetría no llega nunca.
+            "car_subscribed": data.get("car_subscribed"),
+            "car_subscribe_detail": data.get("car_subscribe_detail"),
             "has_position_fix": has_position,
             "last_seen": data.get("last_seen"),
             "last_wake": data.get("last_wake"),

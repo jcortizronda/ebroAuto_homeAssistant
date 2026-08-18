@@ -144,6 +144,7 @@ class EbroCoordinator(DataUpdateCoordinator):
         self.state = VehicleState(self.awake_window)
         self.data = {"fields": {}, "position": None,
                      "awake": False, "car_connected": False,
+                     "car_subscribed": None, "car_subscribe_detail": None,
                      "session_ok": None, "session_detail": "",
                      # — sensores de diagnóstico —
                      "cmd_status": None, "wake_status": None, "probe_status": None,
@@ -337,6 +338,7 @@ class EbroCoordinator(DataUpdateCoordinator):
             on_message=self._on_car_message,
             on_connected=self._on_mqtt_connected,
             on_disconnected=self._on_mqtt_disconnected,
+            on_subscribed=self._on_mqtt_subscribed,
         )
         self._car.connect()
 
@@ -348,6 +350,14 @@ class EbroCoordinator(DataUpdateCoordinator):
         if self._diag is not None:
             self._mqtt_up_ts = time.time()
             self._diag.record("mqtt_conn", event="connect", rc=str(rc), ok=ok)
+
+    def _on_mqtt_subscribed(self, ok: bool, detail: str) -> None:
+        """El broker puede aceptar la CONEXIÓN y denegar el TOPIC, y hasta ahora los dos casos
+        se veían igual desde fuera: `car_connected: true` y ni un mensaje. Publicarlo separa
+        «el coche no ha dicho nada» de «no nos dejan escuchar»."""
+        self._update({"car_subscribed": ok, "car_subscribe_detail": detail})
+        if self._diag is not None:
+            self._diag.record("mqtt_conn", event="subscribe", ok=ok, detail=detail)
 
     def _on_mqtt_disconnected(self, rc) -> None:
         self._update({"car_connected": False})

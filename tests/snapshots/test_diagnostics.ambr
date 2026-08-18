@@ -27,6 +27,8 @@
       'state': dict({
         'awake': True,
         'car_connected': True,
+        'car_subscribe_detail': None,
+        'car_subscribed': None,
         'cmd_status': 'confirmado ✅',
         'fields': dict({
           'airPurification': '0',
