@@ -153,6 +153,11 @@ entidad muestra el objetivo, porque el coche tarda en confirmar. Ese objetivo ce
 llega un push MQTT (`last_seen`) **o** una sonda con contenido distinto (`car_data_ts`).
 Anclarlo solo a MQTT dejaba el objetivo clavado para siempre en un coche que no empuja.
 
+**La sonda responde igual de bien con el coche dormido, y no significa lo mismo.** Despierto
+contesta el coche; dormido, la nube devuelve la última instantánea que guardó, que puede tener
+media hora. `onlineStatus` de la propia respuesta es lo que los distingue, y `probe.freshness()`
+lo dice en el texto del sensor en vez de anunciar las dos cosas como tiempo real.
+
 **El sondeo no tiene intervalo fijo.** Cargando, enchufado, en marcha, en marcha detenido y
 parado tienen ritmos distintos; parado, por defecto, significa no tocar el coche. El bucle se
 auto-reprograma, así que `PollController.schedule_next()` es el único sitio donde puede
@@ -180,7 +185,7 @@ diff antes.
 
 ```bash
 cd my_develops/ebroAuto_homeAssistant
-.venv-test/bin/pytest tests/ -n 4          # 635 tests, 270 snapshots
+.venv-test/bin/pytest tests/ -n 4          # 639 tests, 270 snapshots
 .venv-test/bin/ruff check custom_components tests
 ```
 

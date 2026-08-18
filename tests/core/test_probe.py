@@ -223,3 +223,40 @@ def test_probe_once_combina_los_tres_endpoints(ctx: CoreCtx) -> None:
     assert crudo["gpsTime"] == "123"  # de location
     assert crudo["totalKm"] == "999"  # de travel
     assert crudo["dumpEnergy"] == "64.5"  # de realtime (prioritario)
+
+
+# ───────────────────── de cuándo son los datos de la sonda ─────────────────────
+
+
+def test_freshness_con_el_coche_despierto() -> None:
+    """`onlineStatus=1`: ha contestado el coche, el dato es de ahora mismo."""
+    assert "tiempo real" in probe.freshness({"onlineStatus": "1", "time": "1000"}, now=99999)
+
+
+def test_freshness_con_el_coche_dormido_dice_la_edad() -> None:
+    """El caso que engañaba: el endpoint responde igual de bien, pero devuelve la última
+    instantánea que guardó la nube. Anunciarla como «tiempo real con el coche despierto»
+    mandaba a buscar el fallo donde no estaba."""
+    ahora = 1_787_092_000.0
+    hace_26_min = str(int((ahora - 26 * 60) * 1000))
+
+    mensaje = probe.freshness({"onlineStatus": "0", "time": hace_26_min}, now=ahora)
+
+    assert "26 min" in mensaje
+    assert "dormido" in mensaje
+    assert "tiempo real" not in mensaje
+
+
+def test_freshness_sin_marca_de_tiempo_no_se_inventa_una() -> None:
+    mensaje = probe.freshness({"onlineStatus": "0"}, now=1_787_092_000.0)
+
+    assert "dormido" in mensaje
+    assert "min" not in mensaje
+
+
+def test_freshness_cae_a_result_time_si_no_hay_time() -> None:
+    """`time` es la marca buena, pero no siempre viene."""
+    ahora = 1_787_092_000.0
+    hace_5_min = str(int((ahora - 5 * 60) * 1000))
+
+    assert "5 min" in probe.freshness({"onlineStatus": "0", "resultTime": hace_5_min}, now=ahora)

@@ -49,6 +49,43 @@ RICH_KEYS = ("lat", "lon", "altitude", "direction", "gpsSpeed", "vehicleSpeed",
 _GEO_KEYS = ("lat", "lon", "altitude", "direction")
 _MSG_KEYS = tuple(k for k in RICH_KEYS if k not in _GEO_KEYS)
 
+# Marcas de tiempo que el coche pone en el payload realtime, de la más a la menos fiable.
+_CLOCK_KEYS = ("time", "resultTime")
+
+
+def freshness(data: dict, now: float | None = None) -> str:
+    """Describe DE CUÁNDO son los datos que acaba de devolver la sonda.
+
+    El endpoint realtime responde igual de bien con el coche despierto que dormido, pero no
+    significan lo mismo: despierto contesta el coche, dormido devuelve la última instantánea
+    que la nube guardó, que puede tener media hora. Anunciar las dos cosas como «datos en
+    tiempo real con el coche despierto» —que es lo que hacía— manda al usuario a buscar el
+    fallo donde no está: pulsa «Actualizar», el sensor le dice que todo ha ido bien, y el
+    maletero que acaba de abrir sigue sin aparecer.
+
+    `onlineStatus` es de la propia respuesta, no una deducción nuestra.
+    """
+    online = str(data.get("onlineStatus", "")).strip() in ("1", "1.0")
+    if online:
+        return "🟢🛰️ ¡Datos en tiempo real recibidos con el coche despierto!"
+    edad = _age_min(data, time.time() if now is None else now)
+    if edad is None:
+        return "🟡🛰️ Instantánea de la nube: el coche está dormido, no ha contestado él"
+    return (f"🟡🛰️ Instantánea de la nube de hace {edad} min: el coche está dormido "
+            "y no ha contestado él")
+
+
+def _age_min(data: dict, now: float) -> int | None:
+    """Minutos transcurridos desde la marca de tiempo del payload. `None` si no trae ninguna."""
+    for key in _CLOCK_KEYS:
+        try:
+            ms = float(data.get(key))
+        except (TypeError, ValueError):
+            continue
+        if ms:
+            return max(0, int((now - ms / 1000) // 60))
+    return None
+
 
 def _log(path: str, rec: dict):
     if not path:
@@ -134,11 +171,12 @@ def probe_once(ctx, publish, force=False, on_data=None):
                 publish(f"⚠️ Sonda: error al publicar datos ({type(e).__name__})")
 
         if got1 or got2:
+            titular = freshness(data, now)
             if rich:
                 bits = ", ".join(f"{k}={v}" for k, v in rich.items())
-                publish(f"🟢🛰️ ¡Datos en tiempo real recibidos con el coche despierto! {bits}")
+                publish(f"{titular} {bits}")
             else:
-                publish("🟢🛰️ Sonda: datos recibidos con el coche despierto")
+                publish(titular)
             return {"ok": True, "online": True, "got_data": True,
                     "codes": [c1, c2, c3], "rich": rich}
 
