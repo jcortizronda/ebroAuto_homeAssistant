@@ -165,6 +165,12 @@ class EbroMqttClient:
                 _LOGGER.warning(
                     "[auto] MQTT: descubrimiento denegado en %s (%s) → vuelvo al topic conocido",
                     pedido, detail)
+                # AVISAR ANTES de reintentar. Volver aquí en silencio dejaba el rechazo solo en
+                # el log de Home Assistant: en el archivo de diagnóstico se veía un único
+                # «Granted QoS 1» y parecía que el comodín había funcionado. Costó una lectura
+                # equivocada de una captura de campo — se concluyó «escucho toda la cuenta y no
+                # llega nada» cuando lo cierto era «no me dejan escuchar toda la cuenta».
+                self._on_subscribed(False, detail, pedido)
                 self._requested = cfg.topic
                 _cl.subscribe(cfg.topic, qos=1)
                 return

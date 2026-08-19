@@ -154,10 +154,12 @@ def test_si_la_acl_deniega_el_comodin_se_vuelve_al_topic_conocido(cliente_paho) 
 
     cliente_paho.on_subscribe(cliente_paho, None, 1, [0x80])      # comodín denegado
     cliente_paho.subscribe.assert_called_with(DESCUBRIR.topic, qos=1)
-    assert resultados == []                                        # aún no hay veredicto
+    # el rechazo se AVISA aunque se vaya a reintentar: si no, en el archivo de diagnóstico
+    # solo quedaba el «Granted» del respaldo y parecía que el comodín había funcionado
+    assert resultados == [(False, "128", DESCUBRIR.discovery_topic)]
 
     cliente_paho.on_subscribe(cliente_paho, None, 2, [1])          # el conocido sí
-    assert resultados == [(True, "1", DESCUBRIR.topic)]
+    assert resultados[-1] == (True, "1", DESCUBRIR.topic)
 
 
 def test_el_mensaje_llega_con_su_topic(cliente_paho) -> None:
