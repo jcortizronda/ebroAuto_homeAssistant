@@ -74,6 +74,17 @@ en ese estado:
 
 Cómo se detecta cada estado y por qué estos ritmos → ver **[¿Cómo se actualizan los datos?](#cómo-se-actualizan-los-datos)**.
 
+**Si usas una cuenta secundaria, «Parado» a 0 deja los estados de carrocería sin actualizarse.**
+Puertas, cierre, maletero y techo cambian precisamente **con el coche parado**, y ahí es donde el
+valor por defecto dice «no toques el coche». Con la cuenta propietaria da igual, porque esos
+cambios llegan solos por MQTT; sin ese canal, la única forma de enterarse es preguntar. Ponlo a
+5–10 minutos si quieres que se actualicen sin pulsar el botón, sabiendo que cada consulta con el
+coche parado gasta batería de 12 V — por eso el valor por defecto es 0 y no un número cualquiera.
+
+Otro efecto de no tener MQTT: **«En marcha» no llega a aplicarse nunca**, porque la marcha se
+detecta por la ráfaga de mensajes del coche. Sin ráfaga, circular se clasifica como «en marcha
+detenido» y manda ese intervalo.
+
 > Las credenciales se guardan **solo en tu Home Assistant** (en el config entry). No hay ningún servidor intermedio.
 
 ---
