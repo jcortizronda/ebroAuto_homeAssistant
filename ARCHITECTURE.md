@@ -161,6 +161,11 @@ el REST sí responde igual para las dos cuentas, así que no es una falta de per
 vehículo. Por eso el diagnóstico distingue conectado de suscrito: sin esa distinción, la única
 pista era un `fields_count: 0` que también significa «el coche está dormido».
 
+Queda un cabo suelto: **la app oficial, con esa misma cuenta secundaria, sí refleja las aperturas
+sin que el usuario toque nada**. O sondea en segundo plano mientras está abierta, o se suscribe a
+un topic que no conocemos —solo tenemos el que se dedujo del APK—. Resolverlo pide capturar el
+tráfico MQTT de la app, que es como se dedujo todo lo demás.
+
 **La sonda responde igual de bien con el coche dormido, y no significa lo mismo.** Despierto
 contesta el coche; dormido, la nube devuelve la última instantánea que guardó, que puede tener
 media hora. `onlineStatus` de la propia respuesta es lo que los distingue, y `probe.freshness()`
