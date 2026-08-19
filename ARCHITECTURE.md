@@ -153,11 +153,13 @@ entidad muestra el objetivo, porque el coche tarda en confirmar. Ese objetivo ce
 llega un push MQTT (`last_seen`) **o** una sonda con contenido distinto (`car_data_ts`).
 Anclarlo solo a MQTT dejaba el objetivo clavado para siempre en un coche que no empuja.
 
-**El canal MQTT solo existe para el propietario del vehículo.** El topic va contra el id de
+**El canal MQTT solo entrega en la cuenta propietaria del vehículo.** El topic va contra el id de
 usuario (`app/<canal>/<tuserid>/account/msgCenter/msg`). Con una cuenta invitada el broker acepta
-la conexión y **concede la suscripción** —`car_subscribed: true`, «Granted QoS 1»— pero nadie
-publica ahí nunca. Por eso el diagnóstico distingue conectado de suscrito: sin esa distinción, la
-única pista era un `fields_count: 0` que también significa «el coche está dormido».
+la conexión y **concede la suscripción** —`car_subscribed: true`, «Granted QoS 1»— pero ahí no se
+publica nada. Comprobado en las dos direcciones sobre la misma instalación. El porqué no lo sabemos:
+el REST sí responde igual para las dos cuentas, así que no es una falta de permisos sobre el
+vehículo. Por eso el diagnóstico distingue conectado de suscrito: sin esa distinción, la única
+pista era un `fields_count: 0` que también significa «el coche está dormido».
 
 **La sonda responde igual de bien con el coche dormido, y no significa lo mismo.** Despierto
 contesta el coche; dormido, la nube devuelve la última instantánea que guardó, que puede tener

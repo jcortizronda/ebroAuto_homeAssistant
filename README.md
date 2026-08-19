@@ -42,12 +42,16 @@ Tras instalar y reiniciar: **Ajustes → Dispositivos y servicios → Añadir in
 - **Contraseña** de la cuenta.
 - **PIN** de 4 dígitos del vehículo (el que usas en la app para comandos remotos).
 
-⚠️ **Usa la cuenta PROPIETARIA del vehículo, no una cuenta invitada.** Con una cuenta secundaria
-la integración inicia sesión, acepta comandos y hasta conecta con el broker MQTT — pero el coche
-**no le empuja telemetría**: puertas, cierre, maletero y techo se quedan en el último valor
-conocido. Chery publica los mensajes del vehículo solo en el canal del propietario. Verificado en
-campo (2026-08-18): la misma instalación, cambiando de la cuenta secundaria a la principal, pasó de
-cero mensajes a recibir telemetría con normalidad.
+⚠️ **Usa la cuenta PROPIETARIA del vehículo si quieres telemetría en tiempo real.** Con una cuenta
+secundaria la integración inicia sesión, acepta comandos y conecta con el broker MQTT —la
+suscripción incluso se concede— pero **por ese canal no llega nada**. Verificado en campo
+(2026-08-18): la misma instalación, cambiando de la cuenta secundaria a la principal, pasó de cero
+mensajes a telemetría normal, y al volver a la secundaria dejó de llegar otra vez.
+
+Con una cuenta secundaria el estado sigue siendo consultable —la lectura REST funciona igual para
+las dos— pero solo **cuando se pide**: hay que pulsar «Actualizar ubicación» o dejar activado el
+sondeo periódico. Es lo que hace la app oficial cada vez que la abres, y por eso ahí sí parece
+actualizarse sola.
 
 El VIN y el resto de datos se detectan automáticamente tras el inicio de sesión. Home Assistant
 guarda un token de sesión y lo **renueva solo** (no tendrás que reintroducir la contraseña salvo que
