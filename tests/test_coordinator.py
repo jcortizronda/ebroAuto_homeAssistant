@@ -421,3 +421,44 @@ def test_el_marcador_expired_no_ha_derivado(coordinator) -> None:
     from custom_components.ebro.vehicle import session_manager
 
     assert session_manager.STATUS_EXPIRED == session.STATUS_EXPIRED
+
+
+# ───────────────── dispatch por topic (descubrimiento) ─────────────────
+
+
+async def test_un_mensaje_de_otro_topic_no_toca_el_estado(
+    hass: HomeAssistant, coordinator
+) -> None:
+    """Con el descubrimiento activo llegan topics cuyo formato NO conocemos. Se apuntan, y ya:
+    dar por hecho la forma de un canal que no hemos deducido sería inventarse la telemetría."""
+    coordinator._car_topic = "app/4/U123/account/msgCenter/msg"
+    campos_antes = dict(coordinator.data["fields"])
+    visto_antes = coordinator.data["last_seen"]
+
+    coordinator._on_car_message(
+        _mensaje("5A02", {"doorLock": "9"}), "app/4/U123/algo/desconocido"
+    )
+    await hass.async_block_till_done()
+
+    assert coordinator.data["fields"] == campos_antes
+    assert coordinator.data["last_seen"] == visto_antes
+
+
+async def test_el_topic_conocido_se_procesa_igual_que_siempre(
+    hass: HomeAssistant, coordinator
+) -> None:
+    """El dispatch por topic no puede cambiar el camino normal."""
+    coordinator._car_topic = "app/4/U123/account/msgCenter/msg"
+
+    coordinator._on_car_message(_mensaje("5A02", {"doorLock": "1"}), coordinator._car_topic)
+    await hass.async_block_till_done()
+
+    assert coordinator.data["fields"]["doorLock"] == "1"
+
+
+async def test_sin_topic_se_procesa_como_siempre(hass: HomeAssistant, coordinator) -> None:
+    """Compatibilidad: quien entrega solo los bytes sigue funcionando."""
+    coordinator._on_car_message(_mensaje("5A02", {"doorLock": "1"}))
+    await hass.async_block_till_done()
+
+    assert coordinator.data["fields"]["doorLock"] == "1"

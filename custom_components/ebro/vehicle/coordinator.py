@@ -110,6 +110,8 @@ class EbroCoordinator(DataUpdateCoordinator):
         #     del primero (antes era entorno de PROCESO, compartido por ambos).
 
         self._car: EbroMqttClient | None = None
+        #: topic que esta integración sabe interpretar (se fija al conectar)
+        self._car_topic: str | None = None
         # Registro ÚNICO de los timers (keep-alive, poll, seguimiento HV, sonda inicial, latido
         # de marcha). Antes eran cinco atributos `_*_unsub` cancelados en tres sitios y rearmados
         # en otros dos → sondeos huérfanos que contactaban la nube con la integración apagada.
@@ -332,9 +334,15 @@ class EbroCoordinator(DataUpdateCoordinator):
 
     def _connect_car(self) -> None:
         """Conecta el cliente MQTT del coche. Bloqueante → corre en executor."""
+        config = MqttConfig(host=self.car_host, port=self.car_port, tuserid=self.tuserid,
+                            channel_id=self.channel_id, certs_dir=self.certs_dir,
+                            # Solo con el monitor de diagnóstico encendido: escuchar toda la
+                            # cuenta es una herramienta de investigación, no el modo normal.
+                            discovery=self._diag is not None)
+        # el topic que esta integración sabe interpretar; lo demás que llegue se apunta y ya
+        self._car_topic = config.topic
         self._car = EbroMqttClient(
-            MqttConfig(host=self.car_host, port=self.car_port, tuserid=self.tuserid,
-                       channel_id=self.channel_id, certs_dir=self.certs_dir),
+            config,
             on_message=self._on_car_message,
             on_connected=self._on_mqtt_connected,
             on_disconnected=self._on_mqtt_disconnected,
@@ -384,12 +392,23 @@ class EbroCoordinator(DataUpdateCoordinator):
             self._car.disconnect()
             self._car = None
 
-    def _on_car_message(self, payload: bytes) -> None:
+    def _on_car_message(self, payload: bytes, topic: str | None = None) -> None:
         """Mensaje del coche (hilo paho → push hacia HA).
 
         La INTERPRETACIÓN del payload vive en `telemetry.parse_car_message` (pura). Aquí queda
         lo que necesita estado vivo: el lock que comparte con el executor, el flanco de
         despertar y los disparadores del sondeo."""
+        if topic is not None and topic != self._car_topic:
+            # Llega de un topic que no es el que la integración sabe interpretar: se APUNTA y no
+            # se toca el estado. Lo que se busca aquí es descubrir por dónde publica la nube lo
+            # que el topic conocido no trae (ver `MqttConfig.discovery_topic`); dar por hecho el
+            # formato de un canal que no conocemos sería inventarse la telemetría.
+            _LOGGER.info("[auto] mensaje en un topic NO conocido: %s (%d bytes)",
+                         topic, len(payload or b""))
+            if self._diag is not None:
+                self._diag.record("mqtt_topic", topic=topic, size=len(payload or b""),
+                                  sample=(payload or b"")[:400].decode("utf-8", "replace"))
+            return
         message = parse_car_message(payload)
         if message is None:
             return

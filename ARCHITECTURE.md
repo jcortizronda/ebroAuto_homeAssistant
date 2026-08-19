@@ -161,10 +161,12 @@ el REST sí responde igual para las dos cuentas, así que no es una falta de per
 vehículo. Por eso el diagnóstico distingue conectado de suscrito: sin esa distinción, la única
 pista era un `fields_count: 0` que también significa «el coche está dormido».
 
-Queda un cabo suelto: **la app oficial, con esa misma cuenta secundaria, sí refleja las aperturas
-sin que el usuario toque nada**. O sondea en segundo plano mientras está abierta, o se suscribe a
-un topic que no conocemos —solo tenemos el que se dedujo del APK—. Resolverlo pide capturar el
-tráfico MQTT de la app, que es como se dedujo todo lo demás.
+Queda un cabo suelto: **la app oficial, con esa misma cuenta secundaria, refleja las aperturas al
+instante**. Medido: instantáneo, o sea push — hay algo publicándose en un topic que no conocemos,
+porque solo tenemos el que se dedujo del APK. Para averiguar cuál, con el monitor de diagnóstico
+encendido la suscripción pasa del topic exacto al comodín `app/<canal>/<tuserid>/#`, y todo lo que
+llegue por un topic distinto del conocido se APUNTA sin tocar el estado. Si la ACL deniega el
+comodín, se vuelve solo al topic exacto: pedir de más no puede dejar la integración sin escuchar.
 
 **La sonda responde igual de bien con el coche dormido, y no significa lo mismo.** Despierto
 contesta el coche; dormido, la nube devuelve la última instantánea que guardó, que puede tener
@@ -198,7 +200,7 @@ diff antes.
 
 ```bash
 cd my_develops/ebroAuto_homeAssistant
-.venv-test/bin/pytest tests/ -n 4          # 640 tests, 270 snapshots
+.venv-test/bin/pytest tests/ -n 4          # 648 tests, 270 snapshots
 .venv-test/bin/ruff check custom_components tests
 ```
 

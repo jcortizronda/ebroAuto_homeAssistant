@@ -40,6 +40,9 @@ class MqttConfig:
     tuserid: str
     channel_id: str
     certs_dir: str
+    #: Suscribirse a TODO el espacio de topics de esta cuenta en vez de solo al conocido.
+    #: Sirve para descubrir por dónde llega lo que no llega por `topic`. Ver `discovery_topic`.
+    discovery: bool = False
 
     @property
     def client_id(self) -> str:
@@ -49,6 +52,19 @@ class MqttConfig:
     @property
     def topic(self) -> str:
         return f"app/{self.channel_id}/{self.tuserid}/account/msgCenter/msg"
+
+    @property
+    def discovery_topic(self) -> str:
+        """Comodín sobre el espacio de topics de ESTA cuenta.
+
+        El topic conocido se dedujo del APK y es el único que la integración escucha. Con una
+        cuenta secundaria por ahí no llega nada, pero la app oficial —con esa misma cuenta— sí
+        refleja las aperturas al instante: hay algo publicándose en otro sitio.
+
+        `#` cuelga del prefijo de la propia cuenta, no de la raíz del broker: no se pide ver
+        nada ajeno, solo lo que ya es de este usuario. Si aun así la ACL lo deniega, el SUBACK
+        lo dirá y se vuelve al topic exacto."""
+        return f"app/{self.channel_id}/{self.tuserid}/#"
 
     @property
     def password(self) -> str:
@@ -65,7 +81,7 @@ class EbroMqttClient:
 
     Los cuatro callbacks se invocan **desde el hilo de paho**:
 
-    * `on_message(payload: bytes)` — un mensaje del coche, sin interpretar;
+    * `on_message(payload: bytes, topic: str)` — un mensaje, sin interpretar;
     * `on_connected(ok: bool, rc)` — resultado de un intento de conexión;
     * `on_subscribed(ok: bool, detail)` — resultado del SUBSCRIBE;
     * `on_disconnected(rc)` — la sesión se ha caído.
@@ -75,7 +91,7 @@ class EbroMqttClient:
         self,
         config: MqttConfig,
         *,
-        on_message: Callable[[bytes], None],
+        on_message: Callable[[bytes, str], None],
         on_connected: Callable[[bool, object], None],
         on_disconnected: Callable[[object], None],
         on_subscribed: Callable[[bool, str], None] = lambda ok, detail: None,
@@ -86,6 +102,8 @@ class EbroMqttClient:
         self._on_disconnected = on_disconnected
         self._on_subscribed = on_subscribed
         self._client = None
+        #: qué topic se pidió en el último SUBSCRIBE, para saber a qué responde el SUBACK
+        self._requested: str | None = None
 
     @property
     def connected(self) -> bool:
@@ -113,7 +131,8 @@ class EbroMqttClient:
             _LOGGER.info("[auto] MQTT on_connect rc=%s → %s (sub %s)",
                          rc, "conectado" if ok else "RECHAZADO", cfg.topic if ok else "-")
             if ok:
-                cl.subscribe(cfg.topic, qos=1)
+                self._requested = cfg.discovery_topic if cfg.discovery else cfg.topic
+                cl.subscribe(self._requested, qos=1)
             self._on_connected(ok, rc)
 
         def _on_disconnect(_cl, _userdata, *args):
@@ -136,16 +155,27 @@ class EbroMqttClient:
                 getattr(rc, "value", rc) != 0x80 for rc in reason_codes
             )
             detail = ", ".join(granted) or "sin respuesta"
+            pedido, self._requested = self._requested, None
             if ok:
-                _LOGGER.info("[auto] MQTT suscrito a %s (QoS %s)", cfg.topic, detail)
+                _LOGGER.info("[auto] MQTT suscrito a %s (QoS %s)", pedido, detail)
+            elif pedido == cfg.discovery_topic:
+                # La ACL no deja escuchar toda la cuenta: no es un fallo, es que el
+                # descubrimiento no está permitido. Se cae al topic conocido para no quedarse
+                # SIN suscripción por haber pedido de más.
+                _LOGGER.warning(
+                    "[auto] MQTT: descubrimiento denegado en %s (%s) → vuelvo al topic conocido",
+                    pedido, detail)
+                self._requested = cfg.topic
+                _cl.subscribe(cfg.topic, qos=1)
+                return
             else:
                 _LOGGER.error(
                     "[auto] MQTT SUSCRIPCIÓN RECHAZADA a %s (%s): la conexión está viva pero el "
-                    "coche no podrá entregar telemetría", cfg.topic, detail)
+                    "coche no podrá entregar telemetría", pedido, detail)
             self._on_subscribed(ok, detail)
 
         def _on_message(_cl, _userdata, msg):
-            self._on_message(msg.payload)
+            self._on_message(msg.payload, msg.topic)
 
         client.on_connect = _on_connect
         client.on_disconnect = _on_disconnect
