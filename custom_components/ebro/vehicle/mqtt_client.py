@@ -83,7 +83,7 @@ class EbroMqttClient:
 
     * `on_message(payload: bytes, topic: str)` — un mensaje, sin interpretar;
     * `on_connected(ok: bool, rc)` — resultado de un intento de conexión;
-    * `on_subscribed(ok: bool, detail)` — resultado del SUBSCRIBE;
+    * `on_subscribed(ok: bool, detail, topic)` — resultado del SUBSCRIBE, con el topic pedido;
     * `on_disconnected(rc)` — la sesión se ha caído.
     """
 
@@ -94,7 +94,7 @@ class EbroMqttClient:
         on_message: Callable[[bytes, str], None],
         on_connected: Callable[[bool, object], None],
         on_disconnected: Callable[[object], None],
-        on_subscribed: Callable[[bool, str], None] = lambda ok, detail: None,
+        on_subscribed: Callable[[bool, str, str], None] = lambda ok, detail, topic: None,
     ) -> None:
         self._config = config
         self._on_message = on_message
@@ -172,7 +172,9 @@ class EbroMqttClient:
                 _LOGGER.error(
                     "[auto] MQTT SUSCRIPCIÓN RECHAZADA a %s (%s): la conexión está viva pero el "
                     "coche no podrá entregar telemetría", pedido, detail)
-            self._on_subscribed(ok, detail)
+            # el topic va en el aviso: sin él, un «Granted QoS 1» no dice si se concedió el
+            # comodín o el topic exacto de respaldo — y son conclusiones opuestas.
+            self._on_subscribed(ok, detail, pedido or "")
 
         def _on_message(_cl, _userdata, msg):
             self._on_message(msg.payload, msg.topic)

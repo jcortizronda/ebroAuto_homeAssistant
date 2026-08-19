@@ -29,6 +29,7 @@
         'car_connected': True,
         'car_subscribe_detail': None,
         'car_subscribed': None,
+        'car_topic': None,
         'cmd_status': 'confirmado ✅',
         'fields': dict({
           'airPurification': '0',

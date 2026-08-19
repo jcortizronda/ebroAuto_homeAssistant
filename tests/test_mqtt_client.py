@@ -60,33 +60,36 @@ def test_la_conexion_suscribe_el_topic(cliente_paho) -> None:
 
 def test_una_suscripcion_concedida_se_publica_como_ok(cliente_paho) -> None:
     resultados: list[tuple] = []
-    _conectar(cliente_paho, on_subscribed=lambda ok, detail: resultados.append((ok, detail)))
+    _conectar(cliente_paho, on_subscribed=lambda ok, detail, topic: resultados.append((ok, detail, topic)))
+    cliente_paho.on_connect(cliente_paho, None, None, 0)
 
     cliente_paho.on_subscribe(cliente_paho, None, 1, [1])
 
-    assert resultados == [(True, "1")]
+    assert resultados == [(True, "1", CONFIG.topic)]
 
 
 def test_una_suscripcion_denegada_se_distingue_de_estar_conectado(cliente_paho) -> None:
     """0x80 = el broker acepta la conexión y DENIEGA el topic. Sin este aviso la integración
     se queda conectada y muda para siempre, sin nada que lo delate."""
     resultados: list[tuple] = []
-    _conectar(cliente_paho, on_subscribed=lambda ok, detail: resultados.append((ok, detail)))
+    _conectar(cliente_paho, on_subscribed=lambda ok, detail, topic: resultados.append((ok, detail, topic)))
+    cliente_paho.on_connect(cliente_paho, None, None, 0)
 
     cliente_paho.on_subscribe(cliente_paho, None, 1, [0x80])
 
-    assert resultados == [(False, "128")]
+    assert resultados == [(False, "128", CONFIG.topic)]
 
 
 def test_un_suback_vacio_no_se_da_por_bueno(cliente_paho) -> None:
     """Sin códigos no hay concesión que dar por buena: es un «no sé», y `all()` sobre una lista
     vacía habría dicho que sí."""
     resultados: list[tuple] = []
-    _conectar(cliente_paho, on_subscribed=lambda ok, detail: resultados.append((ok, detail)))
+    _conectar(cliente_paho, on_subscribed=lambda ok, detail, topic: resultados.append((ok, detail, topic)))
+    cliente_paho.on_connect(cliente_paho, None, None, 0)
 
     cliente_paho.on_subscribe(cliente_paho, None, 1, [])
 
-    assert resultados == [(False, "sin respuesta")]
+    assert resultados == [(False, "sin respuesta", CONFIG.topic)]
 
 
 def test_una_conexion_rechazada_no_suscribe(cliente_paho) -> None:
@@ -144,7 +147,7 @@ def test_si_la_acl_deniega_el_comodin_se_vuelve_al_topic_conocido(cliente_paho) 
     client = EbroMqttClient(
         DESCUBRIR, on_message=lambda p, t: None, on_connected=lambda ok, rc: None,
         on_disconnected=lambda rc: None,
-        on_subscribed=lambda ok, detail: resultados.append((ok, detail)),
+        on_subscribed=lambda ok, detail, topic: resultados.append((ok, detail, topic)),
     )
     client.connect()
     cliente_paho.on_connect(cliente_paho, None, None, 0)
@@ -154,7 +157,7 @@ def test_si_la_acl_deniega_el_comodin_se_vuelve_al_topic_conocido(cliente_paho) 
     assert resultados == []                                        # aún no hay veredicto
 
     cliente_paho.on_subscribe(cliente_paho, None, 2, [1])          # el conocido sí
-    assert resultados == [(True, "1")]
+    assert resultados == [(True, "1", DESCUBRIR.topic)]
 
 
 def test_el_mensaje_llega_con_su_topic(cliente_paho) -> None:

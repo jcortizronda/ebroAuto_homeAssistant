@@ -149,6 +149,7 @@ async def async_get_config_entry_diagnostics(
             # denegar el topic, y entonces la telemetría no llega nunca.
             "car_subscribed": data.get("car_subscribed"),
             "car_subscribe_detail": data.get("car_subscribe_detail"),
+            "car_topic": data.get("car_topic"),
             "has_position_fix": has_position,
             "last_seen": data.get("last_seen"),
             "last_wake": data.get("last_wake"),

@@ -147,6 +147,7 @@ class EbroCoordinator(DataUpdateCoordinator):
         self.data = {"fields": {}, "position": None,
                      "awake": False, "car_connected": False,
                      "car_subscribed": None, "car_subscribe_detail": None,
+                     "car_topic": None,
                      "session_ok": None, "session_detail": "",
                      # — sensores de diagnóstico —
                      "cmd_status": None, "wake_status": None, "probe_status": None,
@@ -359,13 +360,18 @@ class EbroCoordinator(DataUpdateCoordinator):
             self._mqtt_up_ts = time.time()
             self._diag.record("mqtt_conn", event="connect", rc=str(rc), ok=ok)
 
-    def _on_mqtt_subscribed(self, ok: bool, detail: str) -> None:
+    def _on_mqtt_subscribed(self, ok: bool, detail: str, topic: str = "") -> None:
         """El broker puede aceptar la CONEXIÓN y denegar el TOPIC, y hasta ahora los dos casos
         se veían igual desde fuera: `car_connected: true` y ni un mensaje. Publicarlo separa
-        «el coche no ha dicho nada» de «no nos dejan escuchar»."""
-        self._update({"car_subscribed": ok, "car_subscribe_detail": detail})
+        «el coche no ha dicho nada» de «no nos dejan escuchar».
+
+        El TOPIC concedido importa tanto como el sí/no: con el descubrimiento activo, un
+        «Granted QoS 1» a secas no distingue el comodín del topic exacto de respaldo, y son
+        conclusiones opuestas."""
+        self._update({"car_subscribed": ok, "car_subscribe_detail": detail,
+                      "car_topic": topic or None})
         if self._diag is not None:
-            self._diag.record("mqtt_conn", event="subscribe", ok=ok, detail=detail)
+            self._diag.record("mqtt_conn", event="subscribe", ok=ok, detail=detail, topic=topic)
 
     def _on_mqtt_disconnected(self, rc) -> None:
         self._update({"car_connected": False})
