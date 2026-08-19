@@ -1,6 +1,7 @@
 """Button: los comandos del coche (catálogo core/commands) + despertar + actualizar posición."""
 from __future__ import annotations
 
+import functools
 import logging
 from typing import ClassVar
 
@@ -28,7 +29,13 @@ async def async_setup_entry(
             continue
         ents.append(EbroCommandButton(coord, key, spec))
     ents.append(EbroActionButton(coord, "Ebro Despertar coche", "wake", coord.async_wake))
-    ents.append(EbroActionButton(coord, "Ebro Actualizar ubicación", "refresh_pos", coord.async_probe))
+    # `force=True`: el cooldown de la sonda existe para frenar el BUCLE automático, no al
+    # usuario. Sin esto, pulsar el botón dentro de los 2 minutos siguientes a la lectura
+    # anterior no hacía absolutamente nada — y encima en silencio, sin publicar un solo
+    # mensaje, así que parecía que el botón estuviera roto. Es además el único llamador que
+    # no forzaba, cuando es el único que responde a una petición explícita de una persona.
+    ents.append(EbroActionButton(coord, "Ebro Actualizar ubicación", "refresh_pos",
+                                    functools.partial(coord.async_probe, force=True)))
     # Actualizar estado completo: fuerza odómetro/batería/tensión REALES encendiendo brevemente
     # el clima (única forma de encender la alta tensión, de la que dependen los datos frescos).
     ents.append(EbroActionButton(coord, "Ebro Actualizar estado completo", "refresh_full",

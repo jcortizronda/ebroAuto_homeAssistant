@@ -149,6 +149,18 @@ def test_probe_once_respeta_el_cooldown(ctx: CoreCtx) -> None:
     login.assert_not_called()
 
 
+def test_el_cooldown_se_anuncia_en_vez_de_volver_en_silencio(ctx: CoreCtx) -> None:
+    """Un retorno mudo era indistinguible de una integración rota: quien pulsaba «Actualizar
+    ubicación» no veía ni un mensaje ni un cambio de estado."""
+    ctx.state.last_probe_ts = time.time()
+    publicados: list[str] = []
+
+    with patch.object(probe.W, "_bff_login"):
+        probe.probe_once(ctx, publicados.append)
+
+    assert any("espero" in m and "s" in m for m in publicados)
+
+
 def test_probe_once_force_ignora_el_cooldown(ctx: CoreCtx) -> None:
     ctx.state.last_probe_ts = time.time()
 

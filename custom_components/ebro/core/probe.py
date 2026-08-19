@@ -130,8 +130,11 @@ def probe_once(ctx, publish, force=False, on_data=None):
         now = time.time()
         last_probe = ctx.state.last_probe_ts
         if not force and last_probe and (now - last_probe) < ctx.probe_cooldown_s:
-            return {"ok": False, "reason": "cooldown",
-                    "wait_s": int(ctx.probe_cooldown_s - (now - last_probe))}
+            # DECIRLO. Volver en silencio dejaba al usuario mirando un botón que no producía
+            # ni un mensaje ni un cambio: indistinguible de una integración rota.
+            wait_s = int(ctx.probe_cooldown_s - (now - last_probe))
+            publish(f"⏳ Sonda: lectura reciente, espero {wait_s} s antes de volver a preguntar")
+            return {"ok": False, "reason": "cooldown", "wait_s": wait_s}
         ctx.state.last_probe_ts = now
 
         publish("🛰️ Sonda de posición: el coche está despierto, intento leer GPS/tiempo real…")

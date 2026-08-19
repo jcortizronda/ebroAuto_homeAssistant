@@ -90,12 +90,15 @@ async def test_botones_de_comando(
 
 
 @pytest.mark.parametrize(
-    ("entity_id", "metodo"),
+    ("entity_id", "metodo", "kwargs"),
     [
-        ("button.ebro_0001_despertar_coche", "async_wake"),
-        ("button.ebro_0001_actualizar_ubicacion", "async_probe"),
-        ("button.ebro_0001_actualizar_estado_completo", "async_refresh_full_status"),
-        ("button.ebro_0001_aplicar_carga_programada", "async_apply_scheduled_charge"),
+        ("button.ebro_0001_despertar_coche", "async_wake", {}),
+        # `force=True`: el cooldown de la sonda frena el bucle automático, no a quien pulsa.
+        # Sin forzar, pulsar dentro de los 2 min siguientes a la lectura anterior no hacía
+        # nada y encima sin publicar un mensaje — el botón parecía roto.
+        ("button.ebro_0001_actualizar_ubicacion", "async_probe", {"force": True}),
+        ("button.ebro_0001_actualizar_estado_completo", "async_refresh_full_status", {}),
+        ("button.ebro_0001_aplicar_carga_programada", "async_apply_scheduled_charge", {}),
     ],
 )
 async def test_botones_de_accion(
@@ -106,6 +109,7 @@ async def test_botones_de_accion(
     telemetry: dict,
     entity_id: str,
     metodo: str,
+    kwargs: dict,
 ) -> None:
     """`EbroActionButton` liga el método del coordinator EN LA CONSTRUCCIÓN.
 
@@ -127,7 +131,7 @@ async def test_botones_de_accion(
             BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: entity_id}, blocking=True
         )
 
-    action.assert_awaited_once_with()
+    action.assert_awaited_once_with(**kwargs)
 
 
 @pytest.mark.usefixtures("init_integration")
