@@ -14,6 +14,7 @@ Así el usuario puede enviarte el archivo con total seguridad.
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
@@ -38,6 +39,16 @@ TO_REDACT = {
     "email", "phone", "password", "pin", "vin", "tuserid", "seq", "certs_src",
     "lat", "lon", "latitude", "longitude", "position",
 }
+
+
+def _scrub_user(topic: str | None) -> str | None:
+    """Enmascara el identificador de usuario incrustado en un topic MQTT.
+
+    `app/4/401643347363401728/account/msgCenter/msg` → `app/4/**REDACTED**/account/...`
+    """
+    if not topic:
+        return topic
+    return re.sub(r"/\d{6,}(?=/|$)", "/**REDACTED**", topic)
 
 
 def _scrub_vin(obj: Any, vin: str) -> Any:
@@ -149,7 +160,10 @@ async def async_get_config_entry_diagnostics(
             # denegar el topic, y entonces la telemetría no llega nunca.
             "car_subscribed": data.get("car_subscribed"),
             "car_subscribe_detail": data.get("car_subscribe_detail"),
-            "car_topic": data.get("car_topic"),
+            # El topic LLEVA DENTRO el tUserId, que está en `TO_REDACT` — publicarlo entero
+            # sería sacar por la puerta de atrás justo lo que se oculta por la principal.
+            # Interesa la FORMA (comodín o topic exacto), no el número.
+            "car_topic": _scrub_user(data.get("car_topic")),
             "has_position_fix": has_position,
             "last_seen": data.get("last_seen"),
             "last_wake": data.get("last_wake"),

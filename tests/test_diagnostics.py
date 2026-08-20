@@ -177,3 +177,17 @@ def test_to_redact_cubre_las_claves_sensibles_del_entry() -> None:
     """
     assert {"email", "phone", "password", "pin", "vin", "tuserid", "certs_src"} <= TO_REDACT
     assert {"lat", "lon", "latitude", "longitude", "position"} <= TO_REDACT
+
+
+def test_el_topic_no_saca_el_tuserid_por_la_puerta_de_atras() -> None:
+    """`tuserid` está en `TO_REDACT`, y el topic MQTT lo lleva incrustado. El informe se
+    comparte para pedir ayuda: interesa la FORMA del topic —comodín o exacto—, no el número."""
+    from custom_components.ebro.diagnostics import _scrub_user
+
+    limpio = _scrub_user("app/4/401643347363401728/account/msgCenter/msg")
+
+    assert "401643347363401728" not in limpio
+    assert limpio == "app/4/**REDACTED**/account/msgCenter/msg"
+    # la forma se conserva: distinguir el comodín del topic exacto es el objetivo del campo
+    assert _scrub_user("app/4/401643347363401728/#") == "app/4/**REDACTED**/#"
+    assert _scrub_user(None) is None
