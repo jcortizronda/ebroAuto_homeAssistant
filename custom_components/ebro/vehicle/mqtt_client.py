@@ -46,7 +46,20 @@ class MqttConfig:
 
     @property
     def client_id(self) -> str:
-        """Formato EXACTO que espera la ACL del broker: cambiarlo es que rechace la conexión."""
+        """`app_<canal>_<tuserid>`. **NO es el mismo que usa la app oficial.**
+
+        Aquí ponía que este era «el formato EXACTO que espera la ACL del broker». Es falso, y
+        conviene que quede escrito: el volcado de memoria de la app (Chery Vehicle SDK sobre
+        paho) muestra que la suya añade un sufijo derivado de la URL del broker —
+
+            app_4_<tuserid>-ssltspemqx-app-euebroautocom8083
+
+        es decir `ssl://<host>:<puerto>` sin los caracteres no alfanuméricos. El broker acepta
+        igualmente el nuestro, así que el sufijo no lo exige ninguna ACL.
+
+        Y la diferencia es DESEABLE: MQTT obliga a que el clientId sea único, y dos clientes con
+        el mismo se echan mutuamente. Copiar el de la app haría que Home Assistant y el móvil se
+        desconectaran el uno al otro sin parar."""
         return f"app_{self.channel_id}_{self.tuserid}"
 
     @property
