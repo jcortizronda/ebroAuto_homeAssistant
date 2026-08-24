@@ -90,6 +90,17 @@ def _age_min(data: dict, now: float) -> int | None:
     return None
 
 
+def _geo_de(payload: dict | None) -> dict:
+    """Las claves geográficas de un payload, sin las ausentes.
+
+    Cadena vacía y `None` NO son coordenadas: tratarlas como tales manda el coche al ecuador.
+    """
+    if not isinstance(payload, dict):
+        return {}
+    return {k: payload[k] for k in _GEO_KEYS
+            if payload.get(k) is not None and str(payload[k]).strip() != ""}
+
+
 def _log(path: str, rec: dict):
     if not path:
         return
@@ -173,16 +184,25 @@ def probe_once(ctx, publish, force=False, on_data=None):
         # su `lat`/`lon` viejos pisaban en CADA sonda los frescos del endpoint que existe
         # justamente para dar la posición. El resultado era un mapa clavado durante días
         # mientras `last_pos_fix` seguía avanzando: parecía que se actualizaba y no se movía.
-        if got2:
-            location = W._payload(j2) or {}
-            fresca = {k: location[k] for k in _GEO_KEYS
-                      if location.get(k) is not None and str(location[k]).strip() != ""}
-            if fresca:
-                movido = any(str(data.get(k)) != str(v) for k, v in fresca.items())
-                data.update(fresca)
-                # sin coordenadas en el mensaje: el log de la sonda acaba compartiéndose
-                _LOGGER.debug("[probe] posición desde queryVehicleLocation (¿difiere del "
-                              "realtime?: %s)", "sí" if movido else "no")
+        fresca = _geo_de(W._payload(j2) if got2 else None)
+        if fresca:
+            movido = any(str(data.get(k)) != str(v) for k, v in fresca.items())
+            data.update(fresca)
+            # sin coordenadas en el mensaje: el log de la sonda acaba compartiéndose
+            _LOGGER.debug("[probe] posición desde queryVehicleLocation (¿difiere de la "
+                          "instantánea?: %s)", "sí" if movido else "no")
+        elif str(data.get("onlineStatus", "")).strip() not in ("1", "1.0"):
+            # Sin fix propio Y con el coche dormido, lo único que queda es la posición de la
+            # instantánea, que es la CONGELADA. Publicarla no es «mejor que nada»: es peor,
+            # porque PISA la posición buena que pudiera haber traído «Localizar coche», y el
+            # mapa vuelve al punto de hace días. Se descarta, y el device_tracker conserva la
+            # que ya tenía (además la restaura él solo al reiniciar Home Assistant).
+            descartadas = [k for k in _GEO_KEYS if k in data]
+            for k in descartadas:
+                data.pop(k)
+            if descartadas:
+                _LOGGER.debug("[probe] sin fix de ubicación y coche dormido → no se toca la "
+                              "posición conocida")
         rich = _rich(data)
         _log(ctx.probe_log_path, {"event": "probe", "ok": True, "realtime_code": c1, "location_code": c2,
               "travel_code": c3, "got_realtime": got1, "got_location": got2, "got_travel": got3,

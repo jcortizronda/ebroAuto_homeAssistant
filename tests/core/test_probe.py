@@ -320,13 +320,37 @@ def test_la_telemetria_la_sigue_mandando_realtime(ctx: CoreCtx) -> None:
     assert datos["odometer"] == "12345"
 
 
-def test_sin_ubicacion_propia_se_usa_la_del_realtime(ctx: CoreCtx) -> None:
-    """El endpoint de ubicación puede no traer fix (coche dormido, sin cobertura). Entonces la
-    instantánea vieja es mejor que nada: es lo que había antes de este cambio."""
+def test_sin_fix_y_con_el_coche_despierto_vale_la_del_realtime(ctx: CoreCtx) -> None:
+    """Si el coche ha contestado (`onlineStatus=1`), su posición es de ahora, aunque el
+    endpoint de ubicación no haya traído fix."""
     datos = _sonda(ctx, {"queryVehicleLocation": {"code": "000000", "data": {"vin": "X"}},
                          "realtime": REALTIME_POS_VIEJA})
 
     assert datos["lat"] == "40.416775"
+
+
+def test_sin_fix_y_con_el_coche_dormido_no_se_toca_la_posicion(ctx: CoreCtx) -> None:
+    """La instantánea de un coche dormido lleva la posición CONGELADA. Publicarla no es
+    «mejor que nada»: pisa la buena que acaba de traer «Localizar coche» y el mapa vuelve al
+    punto de hace días — que es exactamente lo que se reportó en campo."""
+    dormido = {"code": "000000", "body": {**REALTIME_POS_VIEJA["body"], "onlineStatus": "0"}}
+
+    datos = _sonda(ctx, {"queryVehicleLocation": {"code": "000000", "data": {"vin": "X"}},
+                         "realtime": dormido})
+
+    assert "lat" not in datos
+    assert "lon" not in datos
+    # la telemetría sí se aprovecha: es la posición lo que no es de fiar, no el resto
+    assert datos["dumpEnergy"] == "64.5"
+
+
+def test_con_fix_propio_da_igual_que_el_coche_duerma(ctx: CoreCtx) -> None:
+    """El endpoint de ubicación es la fuente dedicada: si trae fix, se usa."""
+    dormido = {"code": "000000", "body": {**REALTIME_POS_VIEJA["body"], "onlineStatus": "0"}}
+
+    datos = _sonda(ctx, {"queryVehicleLocation": LOCATION_FRESCA, "realtime": dormido})
+
+    assert datos["lat"] == "41.385064"
 
 
 def test_una_posicion_vacia_no_pisa_la_buena(ctx: CoreCtx) -> None:
