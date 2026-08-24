@@ -12,5 +12,5 @@
     "requests>=2.28",
     "pycryptodome>=3.17"
   ],
-  "version": "1.0.1-beta7"
+  "version": "1.0.1-beta8"
 }

@@ -426,6 +426,15 @@ class EbroCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("[auto] mensaje recibido (svc %s): %d campos %s",
                       message.service_type or "?", len(data), _fields_log)
 
+        # [diag] una línea por mensaje recibido: TIPO, si trae posición y cuántos campos. Es
+        # la única forma de responder «¿este coche empuja posición por MQTT, o solo estado?»,
+        # que decide si el mapa puede mantenerse vivo sin tocar el coche. Sin coordenadas: el
+        # archivo se comparte.
+        if self._diag is not None:
+            self._diag.record("mqtt_msg", svc=message.service_type or "?",
+                              geo=bool(message.geo), fields=len(message.state_fields),
+                              meaningful=message.meaningful)
+
         patch = {"last_seen": now_dt}
 
         # [MED] push de POSICIÓN → device_tracker. `message.geo` ya está filtrado: solo

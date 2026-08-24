@@ -462,3 +462,22 @@ async def test_sin_topic_se_procesa_como_siempre(hass: HomeAssistant, coordinato
     await hass.async_block_till_done()
 
     assert coordinator.data["fields"]["doorLock"] == "1"
+
+
+async def test_el_monitor_apunta_el_tipo_de_cada_mensaje(
+    hass: HomeAssistant, coordinator
+) -> None:
+    """Responde a «¿este coche empuja posición por MQTT o solo estado?», que es lo que decide
+    si el mapa puede mantenerse vivo sin tocar el coche. Sin coordenadas en el registro."""
+    from unittest.mock import MagicMock
+
+    coordinator._diag_monitor._recorder = grabador = MagicMock()
+
+    coordinator._on_car_message(_mensaje("1301", {"lat": "40.4", "lon": "-3.7"}))
+    await hass.async_block_till_done()
+
+    tipo, campos = grabador.record.call_args[0], grabador.record.call_args[1]
+    assert tipo[0] == "mqtt_msg"
+    assert campos["svc"] == "1301"
+    assert campos["geo"] is True
+    assert "40.4" not in str(campos)
