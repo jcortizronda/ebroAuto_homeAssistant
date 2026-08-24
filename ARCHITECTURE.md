@@ -168,12 +168,14 @@ encendido la suscripción pasa del topic exacto al comodín `app/<canal>/<tuseri
 llegue por un topic distinto del conocido se APUNTA sin tocar el estado. Si la ACL deniega el
 comodín, se vuelve solo al topic exacto: pedir de más no puede dejar la integración sin escuchar.
 
-**La posición la manda `queryVehicleLocation`, no `realtime`.** La sonda combina tres
-respuestas y `realtime` va la última, así que manda en la telemetría — pero su `lat`/`lon` son
-los de la instantánea congelada y pisaban los del endpoint dedicado. El mapa se quedaba clavado
-días mientras `last_pos_fix` avanzaba en cada lectura. Y cuando NO hay fix propio y el coche
-duerme, la posición no se toca: publicar la congelada pisaría la buena que acaba de traer
-«Localizar coche». Una posición vieja no es «mejor que nada», es peor.
+**`queryVehicleLocation` LEE la última posición; `vehicleLocation` la PIDE.** Los nombres lo
+dicen y la diferencia se nota: la sonda usa la consulta —devuelve lo último que sabe la nube,
+sin tocar el coche— mientras que el botón «Localizar coche (GPS)» manda el comando con taskId y
+hace que el coche reporte un fix nuevo. Es deliberado: la sonda existe para no despertar al
+coche. Y la posición sale ÚNICAMENTE de ahí: la respuesta de `/asr/manager/realtime` no trae
+coordenadas (verificado sobre una captura real de la app: 80 campos, ninguna). Lo que mantiene
+vivo el mapa en el uso normal es el push MQTT de posición, gratis y automático — sin ese canal,
+la única forma de mover el punto es el comando.
 
 **La sonda responde igual de bien con el coche dormido, y no significa lo mismo.** Despierto
 contesta el coche; dormido, la nube devuelve la última instantánea que guardó, que puede tener
@@ -207,7 +209,7 @@ diff antes.
 
 ```bash
 cd my_develops/ebroAuto_homeAssistant
-.venv-test/bin/pytest tests/ -n 4          # 655 tests, 270 snapshots
+.venv-test/bin/pytest tests/ -n 4          # 652 tests, 270 snapshots
 .venv-test/bin/ruff check custom_components tests
 ```
 

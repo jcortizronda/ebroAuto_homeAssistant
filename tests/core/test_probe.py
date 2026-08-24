@@ -19,10 +19,9 @@ from custom_components.ebro.core.context import CoreCtx
 REALTIME_OK = {
     "code": "000000",
     "body": {
-        "lat": "40.416775",
-        "lon": "-3.703790",
-        "altitude": "667",
-        "direction": "180",
+        # SIN lat/lon a propósito: la captura real de la app muestra que `/asr/manager/realtime`
+        # devuelve 80 campos y ninguna coordenada. Ponerlas aquí fabricaba un backend que no
+        # existe, y sobre esa ficción se construyó una explicación equivocada de un fallo real.
         "dumpEnergy": "64.5",
         "vehicleSpeed": "0",
         "odometer": "12345",
@@ -32,6 +31,11 @@ REALTIME_OK = {
     },
 }
 DORMIDO = {"code": "A07900"}
+
+LOCATION_FRESCA = {
+    "code": "000000",
+    "data": {"lat": "41.385064", "lon": "2.173404", "direction": "90"},
+}
 
 
 @pytest.fixture
@@ -91,7 +95,8 @@ def test_probe_once_con_datos_en_vivo(ctx: CoreCtx) -> None:
 
     with (
         patch.object(probe.W, "_bff_login", return_value=("UT", "TU")),
-        patch.object(probe.W, "_signed_post", _post({"realtime": REALTIME_OK})),
+        patch.object(probe.W, "_signed_post",
+                     _post({"realtime": REALTIME_OK, "queryVehicleLocation": LOCATION_FRESCA})),
     ):
         res = probe.probe_once(ctx, publicados.append, force=True, on_data=on_data)
 
@@ -103,10 +108,10 @@ def test_probe_once_con_datos_en_vivo(ctx: CoreCtx) -> None:
     # esté excluida del mensaje legible.
     on_data.assert_called_once()
     crudo = on_data.call_args[0][0]
-    assert crudo["lat"] == "40.416775"
+    assert crudo["lat"] == "41.385064"
 
     # ...y NO aparece en ningún texto publicado
-    assert not any("40.416775" in p for p in publicados)
+    assert not any("41.385064" in p for p in publicados)
 
 
 def test_probe_once_coche_dormido(ctx: CoreCtx) -> None:
@@ -275,20 +280,10 @@ def test_freshness_cae_a_result_time_si_no_hay_time() -> None:
 
 
 # ───────────────── de dónde sale la POSICIÓN ─────────────────
-# `/asr/manager/realtime` devuelve la última instantánea que guardó la nube: con el coche
-# dormido se queda congelada (medido en campo: 26 min, y con un coche que duerme casi siempre,
-# días). Iba la última en la fusión, así que su lat/lon viejos pisaban en cada sonda los del
-# endpoint que existe justamente para dar la posición.
-
-LOCATION_FRESCA = {
-    "code": "000000",
-    "data": {"lat": "41.385064", "lon": "2.173404", "direction": "90"},
-}
-REALTIME_POS_VIEJA = {
-    "code": "000000",
-    "body": {**REALTIME_OK["body"], "lat": "40.416775", "lon": "-3.703790"},
-}
-
+# `queryVehicleLocation` es la única fuente: la respuesta de `/asr/manager/realtime` NO trae
+# coordenadas —verificado sobre una captura real de la app oficial, 80 campos y ninguna—. Y es
+# una CONSULTA: devuelve la última posición conocida por la nube sin pedirle nada al coche.
+# Quien fuerza un fix nuevo es el comando `vehicleLocation`, que va con taskId.
 
 def _sonda(ctx: CoreCtx, respuestas: dict) -> dict:
     recibido: dict = {}
@@ -301,62 +296,25 @@ def _sonda(ctx: CoreCtx, respuestas: dict) -> dict:
 
 
 def test_la_posicion_viene_del_endpoint_de_ubicacion(ctx: CoreCtx) -> None:
-    """El fallo reportado en vivo: tres días clavado en el mismo punto mientras
-    `last_pos_fix` seguía avanzando —o sea, aplicando una posición— y la app oficial iba bien."""
-    datos = _sonda(ctx, {"queryVehicleLocation": LOCATION_FRESCA,
-                         "realtime": REALTIME_POS_VIEJA})
+    """Y solo de ahí: el realtime de esta captura no lleva coordenadas."""
+    datos = _sonda(ctx, {"queryVehicleLocation": LOCATION_FRESCA, "realtime": REALTIME_OK})
 
     assert datos["lat"] == "41.385064"
     assert datos["lon"] == "2.173404"
 
 
-def test_la_telemetria_la_sigue_mandando_realtime(ctx: CoreCtx) -> None:
-    """La excepción es SOLO la posición: batería, odómetro y autonomía viven en realtime y
-    ahí se quedan."""
-    datos = _sonda(ctx, {"queryVehicleLocation": LOCATION_FRESCA,
-                         "realtime": REALTIME_POS_VIEJA})
+def test_la_telemetria_la_manda_realtime(ctx: CoreCtx) -> None:
+    """Donde las dos respuestas coinciden gana realtime, que va la última en la fusión."""
+    datos = _sonda(ctx, {"queryVehicleLocation": LOCATION_FRESCA, "realtime": REALTIME_OK})
 
     assert datos["dumpEnergy"] == "64.5"
     assert datos["odometer"] == "12345"
 
 
-def test_sin_fix_y_con_el_coche_despierto_vale_la_del_realtime(ctx: CoreCtx) -> None:
-    """Si el coche ha contestado (`onlineStatus=1`), su posición es de ahora, aunque el
-    endpoint de ubicación no haya traído fix."""
-    datos = _sonda(ctx, {"queryVehicleLocation": {"code": "000000", "data": {"vin": "X"}},
-                         "realtime": REALTIME_POS_VIEJA})
-
-    assert datos["lat"] == "40.416775"
-
-
-def test_sin_fix_y_con_el_coche_dormido_no_se_toca_la_posicion(ctx: CoreCtx) -> None:
-    """La instantánea de un coche dormido lleva la posición CONGELADA. Publicarla no es
-    «mejor que nada»: pisa la buena que acaba de traer «Localizar coche» y el mapa vuelve al
-    punto de hace días — que es exactamente lo que se reportó en campo."""
-    dormido = {"code": "000000", "body": {**REALTIME_POS_VIEJA["body"], "onlineStatus": "0"}}
-
-    datos = _sonda(ctx, {"queryVehicleLocation": {"code": "000000", "data": {"vin": "X"}},
-                         "realtime": dormido})
+def test_sin_respuesta_de_ubicacion_no_hay_posicion(ctx: CoreCtx) -> None:
+    """Si el endpoint de ubicación no contesta, la sonda se queda sin coordenadas que dar —
+    no hay una segunda fuente de la que sacarlas."""
+    datos = _sonda(ctx, {"queryVehicleLocation": DORMIDO, "realtime": REALTIME_OK})
 
     assert "lat" not in datos
-    assert "lon" not in datos
-    # la telemetría sí se aprovecha: es la posición lo que no es de fiar, no el resto
     assert datos["dumpEnergy"] == "64.5"
-
-
-def test_con_fix_propio_da_igual_que_el_coche_duerma(ctx: CoreCtx) -> None:
-    """El endpoint de ubicación es la fuente dedicada: si trae fix, se usa."""
-    dormido = {"code": "000000", "body": {**REALTIME_POS_VIEJA["body"], "onlineStatus": "0"}}
-
-    datos = _sonda(ctx, {"queryVehicleLocation": LOCATION_FRESCA, "realtime": dormido})
-
-    assert datos["lat"] == "41.385064"
-
-
-def test_una_posicion_vacia_no_pisa_la_buena(ctx: CoreCtx) -> None:
-    """Cadena vacía = campo ausente, no una coordenada en el ecuador."""
-    datos = _sonda(ctx, {"queryVehicleLocation": {"code": "000000", "data": {"lat": "", "lon": None}},
-                         "realtime": REALTIME_POS_VIEJA})
-
-    assert datos["lat"] == "40.416775"
-    assert datos["lon"] == "-3.703790"
