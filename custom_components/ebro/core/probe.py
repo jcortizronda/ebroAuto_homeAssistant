@@ -26,12 +26,15 @@ repetir en cada 5A02.
 Uso estrictamente personal (coche/cuenta del usuario). NO publicar token/certificados.
 """
 import json
+import logging
 import os
 import time
 
 # Reutiliza la infraestructura ya verificada de wake.py: login BFF + POST firmado tspconsole.
 # imports relativos de paquete.
 from . import codes, wake as W
+
+_LOGGER = logging.getLogger(__name__)
 
 # campos "ricos" del CVRealtimeResBean que más nos interesan (si es que llegan)
 RICH_KEYS = ("lat", "lon", "altitude", "direction", "gpsSpeed", "vehicleSpeed",
@@ -152,14 +155,34 @@ def probe_once(ctx, publish, force=False, on_data=None):
         c1, c2, c3 = W._code_of(j1), W._code_of(j2), W._code_of(j3)
         got1, got2, got3 = W._has_live_data(j1), W._has_live_data(j2), W._has_live_data(j3)
 
-        # data combinado: realtime tiene prioridad (lat/lon/batería), travel/location añaden campos extra.
-        # El payload está bajo "data" o "body" según el endpoint (realtime → "body"): W._payload
-        # maneja ambos, si no los 84 campos realtime se perdían.
+        # data combinado: realtime va el ÚLTIMO y por tanto manda en la telemetría (batería,
+        # autonomía, odómetro, estado de puertas), que es donde vive. El payload está bajo
+        # "data" o "body" según el endpoint (realtime → "body"): W._payload maneja ambos, si no
+        # los 84 campos realtime se perdían.
         data = {}
         for src, got in ((j2, got2), (j3, got3), (j1, got1)):
             payload = W._payload(src)
             if got and isinstance(payload, dict):
                 data.update(payload)
+
+        # …con la POSICIÓN como excepción, y no es un detalle: manda `queryVehicleLocation`.
+        #
+        # `/asr/manager/realtime` devuelve la última INSTANTÁNEA que guardó la nube, y con el
+        # coche dormido esa instantánea se queda congelada — medido en campo: 26 minutos de
+        # antigüedad, y con un coche que duerme casi siempre, días. Como iba en último lugar,
+        # su `lat`/`lon` viejos pisaban en CADA sonda los frescos del endpoint que existe
+        # justamente para dar la posición. El resultado era un mapa clavado durante días
+        # mientras `last_pos_fix` seguía avanzando: parecía que se actualizaba y no se movía.
+        if got2:
+            location = W._payload(j2) or {}
+            fresca = {k: location[k] for k in _GEO_KEYS
+                      if location.get(k) is not None and str(location[k]).strip() != ""}
+            if fresca:
+                movido = any(str(data.get(k)) != str(v) for k, v in fresca.items())
+                data.update(fresca)
+                # sin coordenadas en el mensaje: el log de la sonda acaba compartiéndose
+                _LOGGER.debug("[probe] posición desde queryVehicleLocation (¿difiere del "
+                              "realtime?: %s)", "sí" if movido else "no")
         rich = _rich(data)
         _log(ctx.probe_log_path, {"event": "probe", "ok": True, "realtime_code": c1, "location_code": c2,
               "travel_code": c3, "got_realtime": got1, "got_location": got2, "got_travel": got3,
