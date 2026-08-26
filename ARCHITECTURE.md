@@ -182,6 +182,12 @@ contesta el coche; dormido, la nube devuelve la última instantánea que guardó
 media hora. `onlineStatus` de la propia respuesta es lo que los distingue, y `probe.freshness()`
 lo dice en el texto del sensor en vez de anunciar las dos cosas como tiempo real.
 
+**Este coche NO empuja posición por MQTT.** Comprobado sobre una semana de registro con la
+cuenta propietaria: cientos de mensajes, todos `5A02` (estado) y dos `110D` (confirmación de
+comando). Ni un solo `1301`. La posición depende por completo de la sonda, y `queryVehicleLocation`
+es una consulta a la nube, no una orden al coche — de ahí que el mapa solo salte de verdad con
+«Localizar coche (GPS)».
+
 **El sondeo no tiene intervalo fijo.** Cargando, enchufado, en marcha, en marcha detenido y
 parado tienen ritmos distintos; parado, por defecto, significa no tocar el coche. El bucle se
 auto-reprograma, así que `PollController.schedule_next()` es el único sitio donde puede
@@ -209,7 +215,7 @@ diff antes.
 
 ```bash
 cd my_develops/ebroAuto_homeAssistant
-.venv-test/bin/pytest tests/ -n 4          # 653 tests, 270 snapshots
+.venv-test/bin/pytest tests/ -n 4          # 657 tests, 270 snapshots
 .venv-test/bin/ruff check custom_components tests
 ```
 

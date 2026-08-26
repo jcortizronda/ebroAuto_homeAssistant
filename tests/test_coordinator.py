@@ -63,10 +63,22 @@ def _estado(coordinator, *, realtime=None, fields=None):
 
 
 def test_poll_state_cargando(coordinator) -> None:
-    assert _estado(coordinator, realtime={"chargeState": "1"}) == (
-        "cargando",
-        coordinator.poll_charging_min,
+    """Cargar de verdad EXIGE el cable: `chargeState=1` sin él es recuperación en marcha."""
+    assert _estado(
+        coordinator, realtime={"chargeState": "1", "chargeGunState": "1"}
+    ) == ("cargando", coordinator.poll_charging_min)
+
+
+def test_recuperar_en_marcha_no_es_cargar(coordinator) -> None:
+    """`chargeState=1` SIN cable: un híbrido recargando con el freno regenerativo o el motor.
+    Registrado en campo alternando con «en marcha» cada pocos minutos, y relajaba el sondeo de
+    3 a 15 min justo al circular."""
+    label, mins = _estado(
+        coordinator, realtime={"chargeState": "1", "chargeGunState": "0", "hVoltageState": "1"}
     )
+
+    assert label != "cargando"
+    assert mins == coordinator.poll_moving_idle_min
 
 
 def test_poll_state_enchufado_con_alta_tension_es_cargando(coordinator) -> None:
@@ -113,7 +125,8 @@ def test_poll_state_cerca_del_limite_afina_el_sondeo(coordinator) -> None:
     coordinator.charge_limit_soc = 80
 
     label, mins = _estado(
-        coordinator, realtime={"chargeState": "1", "dumpEnergy": "77"}
+        coordinator,
+        realtime={"chargeState": "1", "chargeGunState": "1", "dumpEnergy": "77"},
     )
 
     assert label == "cargando"
@@ -133,7 +146,7 @@ def test_intervalo_cero_significa_no_tocar_el_coche(coordinator) -> None:
 
 
 def test_intervalo_en_segundos(coordinator) -> None:
-    _, mins = _estado(coordinator, realtime={"chargeState": "1"})
+    _, mins = _estado(coordinator, realtime={"chargeState": "1", "chargeGunState": "1"})
 
     assert interval_seconds(mins) == coordinator.poll_charging_min * 60
 

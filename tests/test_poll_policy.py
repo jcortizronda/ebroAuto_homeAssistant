@@ -40,6 +40,17 @@ INTERVALOS = PollIntervals(parked=0, plugged=30, charging=15, moving=3, moving_i
         # Alta tension SIN rafaga: semaforo, o te has bajado con el coche en marcha.
         (CarConditions(plugged=False, charging=False, hv_on=True, burst_active=False),
          PollState.MOVING_IDLE),
+        # RECUPERACION en marcha: chargeState=1 SIN cable. Un hibrido recarga la bateria con
+        # el freno regenerativo o el motor termico, y eso no es una recarga que sondear.
+        # Registrado en campo decenas de veces alternando con "en marcha" cada pocos minutos:
+        # el sondeo se relajaba de 3 a 15 min justo al circular.
+        (CarConditions(plugged=False, charging=True, hv_on=True, burst_active=True),
+         PollState.MOVING),
+        (CarConditions(plugged=False, charging=True, hv_on=True, burst_active=False),
+         PollState.MOVING_IDLE),
+        # ...y sin alta tension tampoco: sin cable no hay nada que cargar.
+        (CarConditions(plugged=False, charging=True, hv_on=False, burst_active=False),
+         PollState.PARKED),
         # Alta tension apagada = parado, pase lo que pase con la rafaga.
         (CarConditions(plugged=False, charging=False, hv_on=False, burst_active=True),
          PollState.PARKED),

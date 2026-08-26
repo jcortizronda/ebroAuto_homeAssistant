@@ -76,8 +76,22 @@ def classify(conditions: CarConditions) -> PollState:
     marcha). (2) La MARCHA se detecta por la RÁFAGA de MQTT (el coche late «Último contacto»
     al circular) + AT encendida y cable desconectado. (3) Con AT encendida pero SIN ráfaga
     (semáforo, o te has bajado con el coche en marcha) → «en marcha detenido», más relajado.
-    (4) AT apagada → parado."""
-    if conditions.charging or (conditions.plugged and conditions.hv_on):
+    (4) AT apagada → parado.
+
+    **Cargar EXIGE el cable.** `chargeState=1` sin cable conectado no es una recarga: es un
+    híbrido recuperando energía en marcha —freno regenerativo o motor térmico— y pasa
+    continuamente mientras se conduce. Registrado en campo el 2026-08-20/25 decenas de veces,
+    siempre con `plugged=false` y alternando con «en marcha» cada pocos minutos:
+
+        13:06:19  cargando   cada 900 s     ← conduciendo
+        13:09:27  en marcha  cada 180 s
+        13:13:12  cargando   cada 900 s     ← conduciendo
+        13:14:13  en marcha  cada 180 s
+
+    El efecto es que el sondeo se relajaba de 3 a 15 minutos JUSTO al circular, que es cuando
+    más rápido cambia todo. Sin cable, la recarga es un detalle del tren motriz, no un estado
+    de sondeo."""
+    if conditions.plugged and (conditions.charging or conditions.hv_on):
         return PollState.CHARGING
     if conditions.plugged and not conditions.plugged_timed_out:
         return PollState.PLUGGED
