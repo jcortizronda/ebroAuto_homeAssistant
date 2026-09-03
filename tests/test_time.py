@@ -151,3 +151,79 @@ async def test_los_segundos_se_descartan(hass: HomeAssistant) -> None:
     )
 
     assert coordinator.preferences.charge_start_minutes == 465
+
+
+# ───────── adoptar la programación que tiene el coche ─────────
+# Estas entidades eran SOLO una preferencia: lo que se envía al pulsar. Cambiar la programación
+# desde la app oficial o desde el propio coche no las tocaba, y mostraban un valor que ya no era
+# el del vehículo.
+
+INICIO = "time.ebro_0001_hora_de_inicio_de_la_carga"
+DURACION = "time.ebro_0001_duracion_de_la_carga"
+
+
+def _programacion(inicio: int, duracion: int):
+    from custom_components.ebro.vehicle.charging import ChargeSchedule
+
+    return ChargeSchedule(enabled=True, start_minutes=inicio, duration_minutes=duracion)
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_adopta_la_hora_y_la_duracion_del_coche(hass: HomeAssistant) -> None:
+    coordinator = get_coordinator(hass)
+
+    coordinator._apply_update({"charge_schedule": _programacion(390, 480)})
+    await hass.async_block_till_done()
+
+    assert hass.states.get(INICIO).state == "06:30:00"
+    assert hass.states.get(DURACION).state == "08:00:00"
+    # y la preferencia que se enviará queda alineada, no solo lo que se ve
+    assert coordinator.preferences.charge_start_minutes == 390
+    assert coordinator.preferences.charge_duration_minutes == 480
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_una_lectura_repetida_no_pisa_una_edicion_a_medias(hass: HomeAssistant) -> None:
+    """El motivo de adoptar solo CUANDO CAMBIA: eliges una hora, y antes de darle a aplicar
+    llega una sonda. Si adoptara en cada lectura, te devolvería al valor viejo."""
+    coordinator = get_coordinator(hass)
+    coordinator._apply_update({"charge_schedule": _programacion(390, 480)})
+    await hass.async_block_till_done()
+
+    await hass.services.async_call(
+        TIME_DOMAIN, SERVICE_SET_VALUE,
+        {ATTR_ENTITY_ID: INICIO, ATTR_TIME: "05:15:00"}, blocking=True,
+    )
+    assert hass.states.get(INICIO).state == "05:15:00"
+
+    # la misma programación otra vez: el coche no ha cambiado nada
+    coordinator._apply_update({"charge_schedule": _programacion(390, 480)})
+    await hass.async_block_till_done()
+
+    assert hass.states.get(INICIO).state == "05:15:00"
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_un_cambio_real_en_el_coche_si_manda(hass: HomeAssistant) -> None:
+    """Lo contrario del test anterior: si la programación cambia de verdad —desde la app o
+    desde el coche—, eso es lo que hay que enseñar."""
+    coordinator = get_coordinator(hass)
+    coordinator._apply_update({"charge_schedule": _programacion(390, 480)})
+    await hass.async_block_till_done()
+
+    coordinator._apply_update({"charge_schedule": _programacion(1290, 480)})
+    await hass.async_block_till_done()
+
+    assert hass.states.get(INICIO).state == "21:30:00"
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_la_duracion_adoptada_respeta_el_minimo_del_coche(hass: HomeAssistant) -> None:
+    """El coche rechaza menos de 1 h con code 89. Si la programación remota trae menos, se
+    sube al mínimo igual que cuando la escribe el usuario."""
+    coordinator = get_coordinator(hass)
+
+    coordinator._apply_update({"charge_schedule": _programacion(390, 30)})
+    await hass.async_block_till_done()
+
+    assert hass.states.get(DURACION).state == "01:00:00"

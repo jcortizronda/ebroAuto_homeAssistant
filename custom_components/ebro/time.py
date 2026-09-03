@@ -38,12 +38,16 @@ from .models import EbroConfigEntry, preference_target
 # al enviar el plan (el backend la interpreta en UTC); la DURACIÓN es un delta (HH:MM = horas y
 # minutos), NO se convierte. Selector HH:MM para poder poner p. ej. 02:15 = 135 min. `min_min` = mínimo
 # aceptado (la duración de carga tiene mínimo 1 h: el coche rechaza menos con code 89).
+# El último elemento es el campo EQUIVALENTE en la programación que tiene el coche
+# (`charging.ChargeSchedule`): al leerla, estas entidades ADOPTAN ese valor. Ver
+# `EbroConfigTime._adopt_car_value`.
 TIMES = [
     ("Ebro Hora de inicio de la carga", "carga_hora_inicio",
-     "charge_start_minutes", *divmod(DEFAULT_CHARGE_START_MIN, 60), "mdi:clock-start", 0),
+     "charge_start_minutes", *divmod(DEFAULT_CHARGE_START_MIN, 60), "mdi:clock-start", 0,
+     "start_minutes"),
     ("Ebro Duración de la carga", "carga_duracion",
      "charge_duration_minutes", *divmod(DEFAULT_CHARGE_DURATION_MIN, 60),
-     "mdi:battery-clock", CHARGE_MIN_DURATION_MIN),
+     "mdi:battery-clock", CHARGE_MIN_DURATION_MIN, "duration_minutes"),
 ]
 
 
@@ -59,12 +63,17 @@ class EbroConfigTime(EbroEntity, TimeEntity, RestoreEntity):
 
     _attr_entity_category = EntityCategory.CONFIG
 
-    def __init__(self, coord, name, suffix, attr, def_h, def_m, icon, min_min=0) -> None:
+    def __init__(self, coord, name, suffix, attr, def_h, def_m, icon, min_min=0,
+                 car_attr=None) -> None:
         super().__init__(coord, name, suffix, entity_id_format=ENTITY_ID_FORMAT)
         self._attr = attr
         self._target = preference_target(coord, attr)
         self._min_min = min_min
         self._attr_icon = icon
+        self._car_attr = car_attr
+        #: último valor LEÍDO DEL COCHE. Es lo que permite distinguir «el coche ha cambiado»
+        #: de «el usuario ha editado aquí»; ver `_adopt_car_value`.
+        self._car_seen: int | None = None
         self._value = self._as_time(self._clamp(def_h * 60 + def_m))
         self._push()   # el valor por defecto queda disponible antes de que HA añada la entidad
 
@@ -89,6 +98,31 @@ class EbroConfigTime(EbroEntity, TimeEntity, RestoreEntity):
 
     def _push(self) -> None:
         setattr(self._target, self._attr, self._value.hour * 60 + self._value.minute)
+
+    def _adopt_car_value(self) -> None:
+        """Adopta la programación del coche CUANDO CAMBIA, no en cada lectura.
+
+        Estas entidades eran solo una preferencia: lo que se envía al pulsar. Cambiar la
+        programación desde la app oficial o desde el propio coche no las tocaba, así que
+        mostraban un valor que ya no era el del vehículo.
+
+        La condición «cuando cambia» no es un detalle. Adoptar en cada sonda pisaría una
+        edición a medias: eliges 06:30, y antes de darle a aplicar llega una lectura y te
+        devuelve al valor viejo. Comparando contra el ÚLTIMO valor visto del coche, una lectura
+        que repite lo mismo no toca nada y solo un cambio real de verdad manda."""
+        if self._car_attr is None:
+            return
+        horario = self.coordinator.data.get("charge_schedule")
+        remoto = getattr(horario, self._car_attr, None) if horario is not None else None
+        if remoto is None or remoto == self._car_seen:
+            return
+        self._car_seen = int(remoto)
+        self._value = self._as_time(self._clamp(int(remoto)))
+        self._push()
+
+    def _handle_coordinator_update(self) -> None:
+        self._adopt_car_value()
+        super()._handle_coordinator_update()
 
     @property
     def native_value(self) -> time:
