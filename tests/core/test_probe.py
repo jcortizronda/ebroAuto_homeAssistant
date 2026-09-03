@@ -318,3 +318,23 @@ def test_sin_respuesta_de_ubicacion_no_hay_posicion(ctx: CoreCtx) -> None:
 
     assert "lat" not in datos
     assert datos["dumpEnergy"] == "64.5"
+
+
+def test_la_sonda_no_afirma_que_el_coche_esta_despierto_antes_de_preguntar(
+    ctx: CoreCtx,
+) -> None:
+    """El mensaje de apertura decía «el coche está despierto» ANTES de la primera petición, y
+    dos líneas después la respuesta concluía que dormía. Quien lo sabe es `freshness()`, con el
+    `onlineStatus` de la respuesta delante."""
+    dormido = {"code": "000000", "body": {**REALTIME_OK["body"], "onlineStatus": "0"}}
+    publicados: list[str] = []
+
+    with (
+        patch.object(probe.W, "_bff_login", return_value=("UT", "TU")),
+        patch.object(probe.W, "_signed_post",
+                     _post({"realtime": dormido, "queryVehicleLocation": LOCATION_FRESCA})),
+    ):
+        probe.probe_once(ctx, publicados.append, force=True)
+
+    assert not any("está despierto" in m for m in publicados)
+    assert any("dormido" in m for m in publicados)

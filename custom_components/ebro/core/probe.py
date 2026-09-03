@@ -140,7 +140,12 @@ def probe_once(ctx, publish, force=False, on_data=None):
             return {"ok": False, "reason": "cooldown", "wait_s": wait_s}
         ctx.state.last_probe_ts = now
 
-        publish("🛰️ Sonda de posición: el coche está despierto, intento leer GPS/tiempo real…")
+        # NO afirmar aquí que el coche está despierto: todavía no se ha preguntado nada. El
+        # mensaje es de cuando la sonda solo se lanzaba en el flanco dormido→despierto; ahora la
+        # dispara también el botón y el bucle, con el coche en cualquier estado. Quien lo sabe es
+        # `freshness()`, DESPUÉS de la respuesta y mirando su `onlineStatus` — y quedaba el
+        # absurdo de anunciar «el coche está despierto» y concluir dos líneas después que dormía.
+        publish("🛰️ Sonda de posición: pregunto por GPS y datos en tiempo real…")
         ut, _tu = W._bff_login(ctx)
         if not ut:
             publish("🔑 Sonda: sesión caducada (vuelve a autenticarte). Reintento al próximo despertar")
@@ -198,9 +203,8 @@ def probe_once(ctx, publish, force=False, on_data=None):
             return {"ok": True, "online": True, "got_data": True,
                     "codes": [c1, c2, c3], "rich": rich}
 
-        publish(f"🟡 Sonda: aún sin posición con el coche despierto "
-                f"(realtime={c1} [{codes.meaning(c1)}], location={c2}, travel={c3}). "
-                "Confirmado: hace falta otro paso")
+        publish(f"🟡 Sonda: sin posición ni datos "
+                f"(realtime={c1} [{codes.meaning(c1)}], location={c2}, travel={c3})")
         return {"ok": True, "online": False, "got_data": False, "codes": [c1, c2, c3]}
     except Exception as e:
         publish(f"⚠️ Error de sonda: {type(e).__name__}: {e}")
