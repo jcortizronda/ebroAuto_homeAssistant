@@ -147,6 +147,7 @@ class EbroCoordinator(DataUpdateCoordinator):
         self.data = {"fields": {}, "position": None,
                      "awake": False, "car_connected": False,
                      "car_subscribed": None, "car_subscribe_detail": None,
+                     "charge_schedule": None,
                      "car_topic": None,
                      "session_ok": None, "session_detail": "",
                      # — sensores de diagnóstico —
@@ -324,6 +325,11 @@ class EbroCoordinator(DataUpdateCoordinator):
         # el sondeo huérfano que siguió interrogando a la nube con la integración apagada.
         if self.timers.closing:
             return
+        # La programación de carga viaja con la sonda: es la única forma de enterarse de un
+        # cambio hecho desde la app oficial o desde el propio coche. Una petición más sobre las
+        # tres que la sonda ya hace, y solo cuando la sonda corre — que es lo que el usuario
+        # controla con el interruptor y con los intervalos.
+        await self.async_refresh_charge_schedule()
         self.polling.schedule_next()
 
     def _probe(self, force: bool = False) -> None:
@@ -617,6 +623,23 @@ class EbroCoordinator(DataUpdateCoordinator):
 
         CMD.send(self.ctx, key, emit=emit, params=params)
         return msgs[-1] if msgs else "enviado"
+
+    async def async_refresh_charge_schedule(self) -> None:
+        """Relee la programación de carga del coche y la publica.
+
+        Best-effort: es información, no un comando, y un fallo no debe romper nada."""
+        payload = await self.hass.async_add_executor_job(self._query_charge_schedule)
+        horario = charging.parse_schedule(payload)
+        if horario is not None:
+            self._update({"charge_schedule": horario})
+
+    def _query_charge_schedule(self):
+        from ..core import commands as CMD
+        try:
+            return CMD.query_charge_schedule(self.ctx)
+        except Exception as err:
+            _LOGGER.debug("[carga] no se pudo leer la programación del coche: %s", err)
+            return None
 
     async def async_query_theft(self) -> int | None:
         """Estado de la alarma vía REST (solo lectura); None si no está disponible."""

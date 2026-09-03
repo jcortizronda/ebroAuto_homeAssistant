@@ -23,6 +23,7 @@ from custom_components.ebro.const import (
     CHARGE_STOP_START_BACK_MIN,
     MINUTES_PER_DAY,
 )
+from custom_components.ebro.vehicle import charging
 from custom_components.ebro.vehicle.charging import (
     ALL_WEEKDAYS,
     ChargeLimiter,
@@ -181,3 +182,54 @@ def test_near_target(soc: float | None, cerca: bool) -> None:
 
 def test_near_target_desactivado() -> None:
     assert ChargeLimiter(enabled=False, target_soc=80).near_target(79.0, margin=5) is False
+
+
+# ───────────── la programación que tiene el COCHE ─────────────
+# Las entidades de hora y duración son la PREFERENCIA: lo que se enviará. Si la programación se
+# cambia desde la app oficial o desde el propio coche, no se enteran — y hasta ahora no había
+# forma de saberlo desde Home Assistant.
+
+RESPUESTA = {
+    "mainSwitch": 1,
+    "vin": "LSJA0000000000001",
+    "chargeAppointPlans": [
+        {"startTime": 300, "timeConsuming": 540, "switchStatus": 1,
+         "cycleData": [1, 2, 3, 4, 5, 6, 7]}
+    ],
+}
+
+
+def test_parse_schedule_convierte_la_hora_a_reloj_de_pared() -> None:
+    """El coche guarda `startTime` en UTC. Enseñarlo tal cual haría que una carga puesta a las
+    03:00 desde la app apareciera a las 01:00, y parecería un fallo de la integración."""
+    horario = charging.parse_schedule(RESPUESTA)
+
+    assert horario.enabled is True
+    assert horario.start_minutes == charging.utc_minutes_to_local(300)
+    assert horario.duration_minutes == 540
+    assert horario.days == (1, 2, 3, 4, 5, 6, 7)
+
+
+def test_las_dos_conversiones_de_hora_son_inversas() -> None:
+    for minutos in (0, 1, 59, 300, 465, 720, 1439):
+        ida = charging.local_minutes_to_utc(minutos)
+        assert charging.utc_minutes_to_local(ida) == minutos
+
+
+def test_el_interruptor_general_y_el_del_plan_deben_estar_los_dos() -> None:
+    """`mainSwitch` y `switchStatus` son cosas distintas: con uno apagado el coche no carga."""
+    assert charging.parse_schedule({**RESPUESTA, "mainSwitch": 0}).enabled is False
+
+    plan_off = [{**RESPUESTA["chargeAppointPlans"][0], "switchStatus": 0}]
+    assert charging.parse_schedule({**RESPUESTA, "chargeAppointPlans": plan_off}).enabled is False
+
+
+def test_parse_schedule_aguanta_una_respuesta_pobre() -> None:
+    """Es información de solo lectura: nada de esto puede reventar una sonda."""
+    assert charging.parse_schedule(None) is None
+    assert charging.parse_schedule("no soy un dict") is None
+
+    vacio = charging.parse_schedule({"mainSwitch": 1})
+    assert vacio.enabled is False          # sin plan no hay programación activa
+    assert vacio.start_minutes is None
+    assert vacio.days == ()

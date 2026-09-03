@@ -231,6 +231,57 @@
     'state': '64.5',
   })
 # ---
+# name: test_entities[sensor.ebro_0001_carga_programada_en_el_coche-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': None,
+    'entity_id': 'sensor.ebro_0001_carga_programada_en_el_coche',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': 'mdi:calendar-clock',
+    'original_name': 'Charge schedule on the car',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_carga_programada_en_el_coche',
+    'supported_features': 0,
+    'translation_key': 'carga_programada_en_el_coche',
+    'unique_id': 'LSJA0000000000001_charge_schedule_car',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[sensor.ebro_0001_carga_programada_en_el_coche-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Charge schedule on the car',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:calendar-clock',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.ebro_0001_carga_programada_en_el_coche',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
 # name: test_entities[sensor.ebro_0001_combustible_restante-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -2170,6 +2221,57 @@
     }),
     'context': <ANY>,
     'entity_id': 'sensor.ebro_0001_bateria',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_entities_arranque_en_frio[sensor.ebro_0001_carga_programada_en_el_coche-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': None,
+    'entity_id': 'sensor.ebro_0001_carga_programada_en_el_coche',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': 'mdi:calendar-clock',
+    'original_name': 'Charge schedule on the car',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_carga_programada_en_el_coche',
+    'supported_features': 0,
+    'translation_key': 'carga_programada_en_el_coche',
+    'unique_id': 'LSJA0000000000001_charge_schedule_car',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities_arranque_en_frio[sensor.ebro_0001_carga_programada_en_el_coche-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Charge schedule on the car',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:calendar-clock',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.ebro_0001_carga_programada_en_el_coche',
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,

@@ -188,6 +188,12 @@ comando). Ni un solo `1301`. La posición depende por completo de la sonda, y `q
 es una consulta a la nube, no una orden al coche — de ahí que el mapa solo salte de verdad con
 «Localizar coche (GPS)».
 
+**La programación de carga tiene dos caras, y no son la misma.** Las entidades de hora y
+duración son la PREFERENCIA local: lo que se enviará al pulsar. Lo que el coche tiene puesto se
+lee aparte con `chargeAppointQuery`, porque la programación se puede cambiar desde la app oficial
+o desde el propio coche y por ahí no llega ningún aviso. `startTime` viaja en UTC: enseñarlo tal
+cual convertiría una carga de las 03:00 en las 01:00.
+
 **El sondeo no tiene intervalo fijo.** Cargando, enchufado, en marcha, en marcha detenido y
 parado tienen ritmos distintos; parado, por defecto, significa no tocar el coche. El bucle se
 auto-reprograma, así que `PollController.schedule_next()` es el único sitio donde puede
@@ -215,7 +221,7 @@ diff antes.
 
 ```bash
 cd my_develops/ebroAuto_homeAssistant
-.venv-test/bin/pytest tests/ -n 4          # 657 tests, 270 snapshots
+.venv-test/bin/pytest tests/ -n 4          # 663 tests, 274 snapshots
 .venv-test/bin/ruff check custom_components tests
 ```
 

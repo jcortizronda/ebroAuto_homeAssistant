@@ -143,6 +143,27 @@ def send(ctx, cmd_key, emit=lambda m: None, params=None):
     return out
 
 
+def query_charge_schedule(ctx):
+    """Lee la programación de carga que tiene el coche (SOLO LECTURA).
+
+    `/asd/chargeAppointManage/chargeAppointQuery`, sin taskId: no ejecuta nada ni despierta al
+    coche. Devuelve el `body` en crudo (`mainSwitch` + `chargeAppointPlans`) o `None`.
+
+    Existe porque la programación se puede cambiar desde la app oficial o desde el propio
+    coche, y por ahí la integración no se entera de nada: las entidades de hora y duración son
+    la PREFERENCIA de lo que se enviará, no lo que el vehículo tiene puesto."""
+    token, _tuid = wake._bff_login(ctx)
+    if not token:
+        return None
+    try:
+        _status, j = wake._signed_post(ctx, token, "/asd/chargeAppointManage/chargeAppointQuery",
+                                       {"vin": ctx.vin})
+    except Exception:
+        return None
+    body = j.get("body") if isinstance(j, dict) else None
+    return body if isinstance(body, dict) else None
+
+
 def query_theft_switch(ctx):
     """Lee el estado de la alarma (SOLO LECTURA, /act/theftAlarm/querySwitch).
        Devuelve 1/0 (int) o None si no está disponible. NO usa taskId ni ejecuta nada:

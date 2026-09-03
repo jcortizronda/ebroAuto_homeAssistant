@@ -51,6 +51,64 @@ def local_minutes_to_utc(local_mins: int) -> int:
     return utc_dt.hour * 60 + utc_dt.minute
 
 
+def utc_minutes_to_local(utc_mins: int) -> int:
+    """La inversa de `local_minutes_to_utc`: lo que guarda el coche → reloj de pared.
+
+    Hace falta para ENSEÑAR la programación que tiene el coche. Sin esto, una carga puesta a
+    las 03:00 desde la app se mostraría como 01:00 en España, y el usuario pensaría que la
+    integración se ha equivocado — cuando el desfase es solo el formato del backend."""
+    utc_mins = int(utc_mins) % MINUTES_PER_DAY
+    hh, mm = divmod(utc_mins, 60)
+    utc_dt = dt_util.utcnow().replace(hour=hh, minute=mm, second=0, microsecond=0)
+    local_dt = dt_util.as_local(utc_dt)
+    return local_dt.hour * 60 + local_dt.minute
+
+
+@dataclass(frozen=True)
+class ChargeSchedule:
+    """La programación de carga TAL COMO LA TIENE EL COCHE.
+
+    Distinta de las entidades de hora y duración, que son la preferencia del usuario — lo que
+    se enviará al pulsar. Si la programación se cambia desde la app oficial o desde el propio
+    coche, esas preferencias no se enteran; esto sí.
+    """
+
+    enabled: bool
+    start_minutes: int | None      # reloj de pared local
+    duration_minutes: int | None
+    days: tuple[int, ...] = ()
+
+
+def parse_schedule(payload: dict | None) -> ChargeSchedule | None:
+    """Respuesta de `chargeAppointQuery` → `ChargeSchedule`, o `None` si no es interpretable.
+
+    El interruptor general (`mainSwitch`) y el del plan (`switchStatus`) son cosas distintas y
+    ambos tienen que estar activos para que el coche cargue solo. El coche devuelve una LISTA
+    de planes; se toma el primero, que es el único que esta integración sabe escribir.
+    """
+    if not isinstance(payload, dict):
+        return None
+    planes = payload.get("chargeAppointPlans")
+    plan = planes[0] if isinstance(planes, list) and planes and isinstance(planes[0], dict) else {}
+    encendido = _as_int(payload.get("mainSwitch")) == 1 and _as_int(plan.get("switchStatus")) == 1
+    inicio = _as_int(plan.get("startTime"))
+    duracion = _as_int(plan.get("timeConsuming"))
+    dias = plan.get("cycleData")
+    return ChargeSchedule(
+        enabled=encendido,
+        start_minutes=None if inicio is None else utc_minutes_to_local(inicio),
+        duration_minutes=duracion,
+        days=tuple(int(d) for d in dias) if isinstance(dias, list) else (),
+    )
+
+
+def _as_int(value) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def build_plan(start_minutes: int, duration_minutes: int, switch_status: int) -> dict:
     """Un plan de `chargeAppointPlans`.
 

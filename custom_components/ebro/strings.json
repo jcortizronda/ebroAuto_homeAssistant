@@ -271,6 +271,9 @@
       "corriente_bateria_at": {
         "name": "Corriente batería AT"
       },
+      "carga_programada_en_el_coche": {
+        "name": "Charge schedule on the car"
+      },
       "datos_del_coche_actualizados": {
         "name": "Datos del coche actualizados"
       },

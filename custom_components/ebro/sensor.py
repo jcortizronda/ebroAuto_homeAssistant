@@ -238,6 +238,10 @@ async def async_setup_entry(
     # [2.0] frescura del frame del coche (resultTime del realtime): cómo de viejo es el dato de
     #       batería/odómetro mostrado — útil con el coche parado para saber si es reciente o rancio.
     ents.append(EbroTimestampSensor(coord, "Ebro Datos del coche actualizados", "car_data_ts", "car_data_ts", "mdi:database-clock"))
+    # — la programación de carga TAL COMO LA TIENE EL COCHE —
+    ents.append(EbroChargeScheduleSensor(coord))
+    add(ents)
+
     add(ents)
 
 
@@ -447,3 +451,40 @@ class EbroTimestampSensor(_EbroRestoreSensor):
 
     def _live_value(self):
         return self.coordinator.data.get(self._data_key)
+class EbroChargeScheduleSensor(_EbroRestoreSensor):
+    """La programación de carga que tiene el COCHE, no la que se enviará.
+
+    Las entidades de hora y duración son una preferencia local: lo que se manda al pulsar. Si
+    la programación se cambia desde la app oficial o desde el propio coche, no se enteran — y
+    hasta ahora no había forma de saberlo desde Home Assistant. Este sensor lee
+    `chargeAppointQuery` con cada sonda y enseña lo que hay de verdad.
+
+    El estado es la hora de inicio («07:45») o «Desactivada»; la duración, los días y el detalle
+    van en los atributos, que es donde no estorban en una card."""
+
+    _attr_icon = "mdi:calendar-clock"
+
+    def __init__(self, coord) -> None:
+        super().__init__(coord, "Ebro Carga programada en el coche", "charge_schedule_car")
+
+    def _horario(self):
+        return self.coordinator.data.get("charge_schedule")
+
+    def _live_value(self):
+        horario = self._horario()
+        if horario is None:
+            return None
+        if not horario.enabled or horario.start_minutes is None:
+            return "Desactivada"
+        return f"{horario.start_minutes // 60:02d}:{horario.start_minutes % 60:02d}"
+
+    @property
+    def extra_state_attributes(self) -> dict | None:
+        horario = self._horario()
+        if horario is None:
+            return None
+        return {
+            "activada": horario.enabled,
+            "duracion_min": horario.duration_minutes,
+            "dias": list(horario.days),
+        }

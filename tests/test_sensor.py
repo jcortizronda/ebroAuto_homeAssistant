@@ -74,7 +74,7 @@ async def test_numero_de_entidades(
     entidades = er.async_entries_for_config_entry(
         entity_registry, mock_config_entry.entry_id
     )
-    assert len(entidades) == 35
+    assert len(entidades) == 36
 
 
 @pytest.mark.usefixtures("init_integration")
@@ -193,3 +193,38 @@ async def test_los_sensores_de_diagnostico_no_se_restauran(hass: HomeAssistant) 
     await hass.async_block_till_done()
 
     assert hass.states.get("sensor.ebro_0001_resultado_del_comando").state == "unknown"
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_la_programacion_del_coche_se_ensena_tal_cual(hass: HomeAssistant) -> None:
+    """El caso que lo motivó: cambias la programación desde la app o desde el coche, y en Home
+    Assistant no había forma de enterarse — las entidades de hora y duración son la preferencia
+    de lo que se ENVIARÁ, no lo que el vehículo tiene puesto."""
+    from custom_components.ebro.vehicle.charging import ChargeSchedule
+
+    coordinator = get_coordinator(hass)
+    coordinator._apply_update(
+        {"charge_schedule": ChargeSchedule(
+            enabled=True, start_minutes=465, duration_minutes=540, days=(1, 2, 3))}
+    )
+    await hass.async_block_till_done()
+
+    estado = hass.states.get("sensor.ebro_0001_carga_programada_en_el_coche")
+
+    assert estado.state == "07:45"
+    assert estado.attributes["duracion_min"] == 540
+    assert estado.attributes["dias"] == [1, 2, 3]
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_una_programacion_apagada_lo_dice(hass: HomeAssistant) -> None:
+    from custom_components.ebro.vehicle.charging import ChargeSchedule
+
+    coordinator = get_coordinator(hass)
+    coordinator._apply_update(
+        {"charge_schedule": ChargeSchedule(
+            enabled=False, start_minutes=465, duration_minutes=540)}
+    )
+    await hass.async_block_till_done()
+
+    assert hass.states.get("sensor.ebro_0001_carga_programada_en_el_coche").state == "Desactivada"

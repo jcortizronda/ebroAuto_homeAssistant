@@ -28,7 +28,7 @@ async def test_setup_ok(hass: HomeAssistant, mock_config_entry: MockConfigEntry)
 async def test_todas_las_entidades(
     entity_registry: er.EntityRegistry, mock_config_entry: MockConfigEntry
 ) -> None:
-    """Con las 10 plataformas cargadas deben nacer 93 entidades.
+    """Con las 10 plataformas cargadas deben nacer 94 entidades.
 
     Es el guardarraíl más barato contra una tabla que pierda filas: cada plataforma tiene su
     propio recuento, pero este total pilla también una plataforma que no llegue a cargar.
@@ -36,7 +36,7 @@ async def test_todas_las_entidades(
     entidades = er.async_entries_for_config_entry(
         entity_registry, mock_config_entry.entry_id
     )
-    assert len(entidades) == 93
+    assert len(entidades) == 94
 
 
 @pytest.mark.usefixtures("init_integration")
