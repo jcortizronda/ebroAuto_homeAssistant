@@ -158,3 +158,29 @@ async def test_la_sonda_actualiza_el_maletero_con_el_coche_dormido(hass: HomeAss
     await hass.async_block_till_done()
 
     assert hass.states.get(MALETERO).state == STATE_OPEN
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_el_maletero_no_se_reabre_al_dormirse_el_coche(hass: HomeAssistant) -> None:
+    """La secuencia REAL del historial del usuario (04/09/2026):
+
+        12:21:50  cerrado   ← último push MQTT: cerrado de verdad
+        12:26:51  despierto → off   (vence la ventana, 300 s después)
+        12:26:51  ABIERTO   ← 2 ms más tarde, por la instantánea vieja de la nube
+
+    La instantánea conservaba `trunkDoor=1` de cuando sí estaba abierto, y al dormirse el coche
+    pasaba a mandar ella. Ahora manda el push siempre."""
+    coordinator = get_coordinator(hass)
+
+    coordinator._apply_update({
+        "fields": {"trunkDoor": "0"},          # el coche empujó: cerrado
+        "realtime": {"trunkDoor": "1"},        # la nube guarda la foto de cuando estaba abierto
+        "awake": True,
+    })
+    await hass.async_block_till_done()
+    assert hass.states.get(MALETERO).state == STATE_CLOSED
+
+    coordinator._apply_update({"awake": False})   # vence la ventana de despierto
+    await hass.async_block_till_done()
+
+    assert hass.states.get(MALETERO).state == STATE_CLOSED

@@ -494,3 +494,45 @@ async def test_el_monitor_apunta_el_tipo_de_cada_mensaje(
     assert campos["svc"] == "1301"
     assert campos["geo"] is True
     assert "40.4" not in str(campos)
+
+
+# ───────────── frescura del dato (car_data_ts) ─────────────
+
+
+async def test_el_primer_frame_no_se_fecha_con_result_time(
+    hass: HomeAssistant, coordinator
+) -> None:
+    """`resultTime` se queda congelado durante DÍAS mientras el contenido cambia — en el
+    historial del usuario apareció clavado en el 1 de septiembre durante tres días. Se recorría
+    el primero porque `CLOCK_FIELDS` está ordenada para IGNORARLAS todas al calcular la huella
+    del contenido, no por fiabilidad. La marca que sigue al contenido es `time`."""
+    from datetime import UTC, datetime
+
+    viejo = int(datetime(2026, 9, 1, 19, 34, tzinfo=UTC).timestamp() * 1000)
+    bueno = int(datetime(2026, 9, 4, 5, 41, tzinfo=UTC).timestamp() * 1000)
+
+    coordinator._on_probe_data({"resultTime": str(viejo), "time": str(bueno), "dumpEnergy": "70"})
+    await hass.async_block_till_done()
+
+    assert coordinator.data["car_data_ts"] == datetime(2026, 9, 4, 5, 41, tzinfo=UTC)
+
+
+async def test_despues_del_primer_frame_manda_el_contenido(
+    hass: HomeAssistant, coordinator
+) -> None:
+    """Ya con algo con qué comparar, la frescura la marca que el CONTENIDO cambie: una lectura
+    idéntica no la mueve, aunque el coche declare otra hora."""
+    from datetime import UTC, datetime
+
+    t0 = int(datetime(2026, 9, 4, 5, 41, tzinfo=UTC).timestamp() * 1000)
+    coordinator._on_probe_data({"time": str(t0), "dumpEnergy": "70"})
+    await hass.async_block_till_done()
+    primero = coordinator.data["car_data_ts"]
+
+    coordinator._on_probe_data({"time": str(t0 + 60_000), "dumpEnergy": "70"})
+    await hass.async_block_till_done()
+    assert coordinator.data["car_data_ts"] == primero          # mismo contenido → no se mueve
+
+    coordinator._on_probe_data({"time": str(t0 + 60_000), "dumpEnergy": "69"})
+    await hass.async_block_till_done()
+    assert coordinator.data["car_data_ts"] > primero           # cambió → avanza

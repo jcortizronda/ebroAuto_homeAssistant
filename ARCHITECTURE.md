@@ -8,8 +8,10 @@ el diseño:
 - **MQTT** (mutual-TLS, `tspemqx-app-eu`): el coche empuja puertas, cierre, cable, motor. Llega
   solo y no cuesta nada.
 - **REST** (`tspconsole-eu`): batería, autonomía, alta tensión, progreso de carga y los
-  comandos. Hay que pedirlo. Pedirlo de más consume la batería de 12 V y desconecta la app
-  oficial, porque la nube de Chery solo admite una sesión por cuenta.
+  comandos. Hay que pedirlo — **a la nube, no al coche**: la sonda no lo despierta, y con el coche
+  dormido responde con una instantánea de hace minutos u horas. Pedirlo de más no gasta batería
+  del vehículo; lo que hace es competir con la app oficial, porque la nube de Chery solo admite
+  una sesión por cuenta. Quien sí despierta el coche son los comandos.
 
 ## Estructura
 
@@ -140,13 +142,16 @@ los executors y el bucle de eventos. `VehicleState` no expone sus dicts, devuelv
 `record_message()` resuelve los campos y el flanco de despertar en la misma operación, porque
 leerlos por separado deja una ventana en la que el flanco se pierde.
 
-**Los dos canales traen las mismas claves, y cuál manda depende del coche.** `doorLock`,
-`trunkDoor`, `frontHVACState` y las puertas vienen tanto en el push 5A02 como en la sonda
-realtime. `helpers.field()` prefiere el push mientras el coche está despierto y la sonda cuando
-está dormido: `fields` se acumula y nunca se vacía, así que con el coche parado lo que queda ahí
-es historia. Cualquiera de los dos órdenes fijos deja una entidad mintiendo — leer solo el push
-congelaba el cierre y el maletero en cuanto MQTT se quedaba seco, que es lo que pasa con la app
-oficial abierta.
+**Los dos canales traen las mismas claves, y manda el push.** `doorLock`, `trunkDoor`,
+`frontHVACState` y las puertas vienen tanto en el push 5A02 como en la sonda realtime.
+`helpers.field()` usa el push y solo cae a la sonda si el push no trae la clave — que es el caso
+de las cuentas sin MQTT, para las que existe el respaldo.
+
+Hubo una versión que invertía la prioridad con el coche dormido, razonando que `fields` se
+acumula y nunca se vacía. Salió mal: la instantánea de la nube también es historia, y puede ser
+más vieja. Medido el 04/09/2026 — el maletero se cerró, el push lo reflejó, y 2 ms después de
+vencer la ventana de «despierto» la entidad volvía a «abierto» con el `trunkDoor=1` de la
+instantánea. Un push es un EVENTO; la instantánea es una caché.
 
 **El estado optimista caduca con la verdad, venga por donde venga.** Tras un comando la
 entidad muestra el objetivo, porque el coche tarda en confirmar. Ese objetivo cede en cuanto
@@ -223,7 +228,7 @@ diff antes.
 
 ```bash
 cd my_develops/ebroAuto_homeAssistant
-.venv-test/bin/pytest tests/ -n 4          # 668 tests, 274 snapshots
+.venv-test/bin/pytest tests/ -n 4          # 672 tests, 274 snapshots
 .venv-test/bin/ruff check custom_components tests
 ```
 

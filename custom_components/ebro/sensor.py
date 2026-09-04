@@ -414,6 +414,7 @@ class EbroTextSensor(_EbroRestoreSensor):
         super().__init__(coord, name, suffix)
         self._data_key = data_key
         self._attr_icon = icon
+        self._max_seen: datetime | None = None
 
     def _live_value(self):
         return self.coordinator.data.get(self._data_key) or None
@@ -427,7 +428,21 @@ class EbroTextSensor(_EbroRestoreSensor):
 
 
 class EbroTimestampSensor(_EbroRestoreSensor):
-    """Timestamp de diagnóstico (último contacto/despertar/posición)."""
+    """Timestamp de diagnóstico (último contacto/despertar/posición).
+
+    **Nunca retrocede.** Estos sensores responden a «cuándo fue la última vez que…», así que un
+    valor que va hacia atrás no significa nada: solo puede ser una lectura peor que la anterior.
+    Y pasaba — al recargar la integración, el primer frame se fecha con la marca que declara el
+    coche, y si esa marca es más vieja que lo ya registrado el sensor daba un salto atrás. En el
+    historial del usuario, varias veces al día: 07:41 → 06:00, y dos veces volviendo a un valor
+    de tres días antes.
+
+    Se guarda el MÁXIMO VISTO, no solo el restaurado. El salto conocido llega al recargar, y
+    comparar contra el valor restaurado bastaría para ese caso; pero entonces la garantía
+    dependería de que la fuente sea monótona dentro de una sesión, que hoy lo es por como se
+    calcula `car_data_ts` y mañana puede no serlo. Un trinquete de verdad no se apoya en eso.
+
+    Trinquete, no congelador: un valor MÁS NUEVO siempre manda."""
 
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -436,6 +451,7 @@ class EbroTimestampSensor(_EbroRestoreSensor):
         super().__init__(coord, name, suffix)
         self._data_key = data_key
         self._attr_icon = icon
+        self._max_seen: datetime | None = None
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -448,9 +464,21 @@ class EbroTimestampSensor(_EbroRestoreSensor):
         if not (isinstance(r, datetime) and r.tzinfo is not None):
             r = None
         self._restored = r
+        self._max_seen = r
+
+    @property
+    def native_value(self):
+        valor = super().native_value
+        if not isinstance(valor, datetime):
+            return valor
+        if self._max_seen is None or valor > self._max_seen:
+            self._max_seen = valor
+        return self._max_seen
 
     def _live_value(self):
         return self.coordinator.data.get(self._data_key)
+
+
 class EbroChargeScheduleSensor(_EbroRestoreSensor):
     """La programación de carga que tiene el COCHE, no la que se enviará.
 

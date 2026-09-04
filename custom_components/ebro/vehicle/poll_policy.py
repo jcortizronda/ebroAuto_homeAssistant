@@ -1,10 +1,18 @@
 """Cada cuánto sondear el canal realtime, según el ESTADO del coche.
 
 El canal MQTT (puertas, cierre, cable, motor…) llega solo y gratis. El canal realtime
-(batería, autonomía, alta tensión, progreso de carga…) hay que pedirlo. Pedirlo de más tiene
-un coste real y medible: consume la batería de 12 V del coche y compite con la app oficial,
-porque la nube de Chery admite **una sola sesión por cuenta** — cuando el componente habla, la
-app del usuario se desconecta.
+(batería, autonomía, alta tensión, progreso de carga…) hay que pedirlo.
+
+**Y pedirlo NO despierta el coche.** La sonda interroga a la nube, no al vehículo: con el coche
+dormido responde igual, con `onlineStatus=0` y una instantánea de hace minutos u horas. Durante
+mucho tiempo aquí ponía que sondear «consume la batería de 12 V del coche», y es falso —eso lo
+hacen los comandos, que sí lo despiertan—. Lo que sí cuesta es tráfico contra la nube y la
+sesión, que Chery concede **una por cuenta**: si el componente habla mucho, compite con la app
+oficial del usuario.
+
+Aun así el ritmo sigue dependiendo del estado, por dos razones que no son la batería: con el
+coche dormido la nube devuelve la misma foto una y otra vez, y con el coche en marcha los datos
+cambian rápido y merece la pena preguntar más.
 
 De ahí que el ritmo no sea fijo sino función del estado. Esta decisión vivía repartida entre
 `_poll_state`, `_active_interval_s`, `_burst_active` y `_note_mqtt_burst` del coordinator,
@@ -103,8 +111,8 @@ def classify(conditions: CarConditions) -> PollState:
 def interval_seconds(minutes: int) -> int | None:
     """Minutos configurados → segundos, o `None` si ese estado tiene el sondeo desactivado.
 
-    `None` NO es un error: es «no toques el coche hasta el próximo evento MQTT gratis», que es
-    el valor por defecto con el coche parado."""
+    `None` NO es un error: es «no preguntes nada hasta el próximo evento MQTT gratis», que es el
+    valor por defecto con el coche parado."""
     return minutes * 60 if minutes and minutes > 0 else None
 
 

@@ -12,7 +12,7 @@ rearmados en otros dos. La consecuencia no era teórica:
   frecuente, el de 2 minutos.
 
 Ninguno de los dos daba errores en el log. El coste era real pero invisible: consumo de la
-batería de 12V del coche y conflicto con la app oficial, que en la nube de Chery admite **una
+tráfico contra la nube y conflicto con la app oficial, que en la nube de Chery admite **una
 sola sesión por cuenta** — cuando el componente habla, la app del usuario se desconecta.
 
 **El invariante, en un solo sitio.** Tras `close()` ningún timer puede volver a armarse:

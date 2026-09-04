@@ -53,7 +53,6 @@ from .polling import PollController
 from .session_manager import SessionManager
 from .state import VehicleState
 from .telemetry import (
-    CLOCK_FIELDS,
     GEO_KEYS,
     content_fingerprint,
     format_command_result,
@@ -67,6 +66,12 @@ from .timers import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Marcas de tiempo del payload realtime ordenadas por FIABILIDAD, que no es el orden de
+# `CLOCK_FIELDS` (ese existe para IGNORARLAS todas al calcular la huella del contenido).
+# `time` es la que sigue al contenido; `resultTime` se queda atrás. Misma prioridad que
+# `core/probe.freshness`, para que el sensor y el mensaje de la sonda no se contradigan.
+_FRESHNESS_FIELDS = ("time", "collectTime", "updateTime", "resultTime")
 
 
 class EbroCoordinator(DataUpdateCoordinator):
@@ -751,7 +756,13 @@ class EbroCoordinator(DataUpdateCoordinator):
                 # Primer frame tras el arranque: no hay nada con qué comparar. Se parte del
                 # timestamp declarado por el coche en vez de hacer pasar por "ahora" un dato
                 # que podría ser viejo de horas.
-                for tk in CLOCK_FIELDS:
+                #
+                # Y se pide en el orden de FIABILIDAD, no en el del catálogo: `resultTime` es
+                # justo el campo que el comentario de arriba declara poco fiable —se queda
+                # atrás mientras los valores cambian— y sin embargo era el primero que se
+                # miraba, porque `CLOCK_FIELDS` está ordenado para otra cosa. De ahí venía un
+                # sensor que tras recargar la integración saltaba HACIA ATRÁS casi dos horas.
+                for tk in _FRESHNESS_FIELDS:
                     ms = to_float(data.get(tk))
                     if ms:
                         patch["car_data_ts"] = dt_util.utc_from_timestamp(ms / 1000)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
@@ -228,3 +229,54 @@ async def test_una_programacion_apagada_lo_dice(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
 
     assert hass.states.get("sensor.ebro_0001_carga_programada_en_el_coche").state == "Desactivada"
+
+
+def _sensor_frescura(hass: HomeAssistant):
+    return hass.data["entity_components"][SENSOR_DOMAIN].get_entity(
+        "sensor.ebro_0001_datos_del_coche_actualizados"
+    )
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_un_timestamp_no_retrocede_tras_recargar(hass: HomeAssistant) -> None:
+    """La secuencia REAL del historial del usuario (4 de septiembre de 2026).
+
+    Al recargar la integración, el primer frame se fecha con la marca que declara el coche. Si
+    esa marca es más vieja que lo ya registrado —y lo era, porque venía de `resultTime`, que se
+    queda congelado durante días— el sensor daba un salto atrás."""
+    from datetime import UTC, datetime
+
+    entidad = _sensor_frescura(hass)
+    entidad._restored = entidad._max_seen = datetime(2026, 9, 4, 5, 41, 52, tzinfo=UTC)
+    coordinator = get_coordinator(hass)
+
+    coordinator._apply_update({"car_data_ts": datetime(2026, 9, 4, 4, 0, 44, tzinfo=UTC)})
+    await hass.async_block_till_done()
+
+    assert entidad.native_value == datetime(2026, 9, 4, 5, 41, 52, tzinfo=UTC)
+
+    # ...pero un valor MÁS NUEVO sí manda: es un trinquete, no un congelador
+    coordinator._apply_update({"car_data_ts": datetime(2026, 9, 4, 6, 15, tzinfo=UTC)})
+    await hass.async_block_till_done()
+
+    assert entidad.native_value == datetime(2026, 9, 4, 6, 15, tzinfo=UTC)
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_el_trinquete_no_depende_del_valor_restaurado(hass: HomeAssistant) -> None:
+    """Sin nada restaurado —instalación nueva— la garantía tiene que seguir en pie: se guarda
+    el máximo VISTO, no solo el de arranque."""
+    from datetime import UTC, datetime
+
+    entidad = _sensor_frescura(hass)
+    entidad._restored = entidad._max_seen = None
+    coordinator = get_coordinator(hass)
+
+    coordinator._apply_update({"car_data_ts": datetime(2026, 9, 4, 6, 15, tzinfo=UTC)})
+    await hass.async_block_till_done()
+    assert entidad.native_value == datetime(2026, 9, 4, 6, 15, tzinfo=UTC)
+
+    coordinator._apply_update({"car_data_ts": datetime(2026, 9, 1, 19, 34, tzinfo=UTC)})
+    await hass.async_block_till_done()
+
+    assert entidad.native_value == datetime(2026, 9, 4, 6, 15, tzinfo=UTC)

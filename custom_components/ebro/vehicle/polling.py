@@ -3,7 +3,7 @@
 Esta es la decisión más cara de la integración cuando se equivoca. El canal MQTT (puertas,
 cierre, cable, motor) llega solo y gratis, pero el canal realtime — batería, autonomía, alta
 tensión, progreso de carga — hay que **pedirlo**, y pedirlo de más tiene dos costes medidos en
-campo: consume la batería de 12 V del coche, y desconecta la app oficial del usuario, porque la
+campo: compite por la sesión y desconecta la app oficial del usuario, porque la
 nube de Chery admite una sola sesión por cuenta.
 
 De ahí que no haya un intervalo fijo. El ritmo lo decide el ESTADO del coche, y ese estado se
@@ -231,7 +231,7 @@ class PollController:
             "[poll] estado=%s (cable=%s carga=%s AT=%s despierto=%s) → %s",
             label, conditions.plugged, conditions.charging, conditions.hv_on,
             self._coordinator.is_awake,
-            f"sondeo cada {minutes} min" if every else "detenido (no se toca el coche)")
+            f"sondeo cada {minutes} min" if every else "detenido (no se pregunta nada)")
         if every is None:
             return   # parado con intervalo 0 → hasta el próximo disparador MQTT
         if diag is not None:

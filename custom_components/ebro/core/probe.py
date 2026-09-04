@@ -70,12 +70,11 @@ def freshness(data: dict, now: float | None = None) -> str:
     """
     online = str(data.get("onlineStatus", "")).strip() in ("1", "1.0")
     if online:
-        return "🟢🛰️ ¡Datos en tiempo real recibidos con el coche despierto!"
+        return "🟢 En vivo · coche despierto"
     edad = _age_min(data, time.time() if now is None else now)
     if edad is None:
-        return "🟡🛰️ Instantánea de la nube: el coche está dormido, no ha contestado él"
-    return (f"🟡🛰️ Instantánea de la nube de hace {edad} min: el coche está dormido "
-            "y no ha contestado él")
+        return "🟡 Estado desde la nube · coche dormido"
+    return f"🟡 Estado desde la nube · hace {edad} min · coche dormido"
 
 
 def _age_min(data: dict, now: float) -> int | None:
@@ -136,7 +135,7 @@ def probe_once(ctx, publish, force=False, on_data=None):
             # DECIRLO. Volver en silencio dejaba al usuario mirando un botón que no producía
             # ni un mensaje ni un cambio: indistinguible de una integración rota.
             wait_s = int(ctx.probe_cooldown_s - (now - last_probe))
-            publish(f"⏳ Sonda: lectura reciente, espero {wait_s} s antes de volver a preguntar")
+            publish(f"⏳ Lectura reciente · espero {wait_s} s")
             return {"ok": False, "reason": "cooldown", "wait_s": wait_s}
         ctx.state.last_probe_ts = now
 
@@ -145,10 +144,10 @@ def probe_once(ctx, publish, force=False, on_data=None):
         # dispara también el botón y el bucle, con el coche en cualquier estado. Quien lo sabe es
         # `freshness()`, DESPUÉS de la respuesta y mirando su `onlineStatus` — y quedaba el
         # absurdo de anunciar «el coche está despierto» y concluir dos líneas después que dormía.
-        publish("🛰️ Sonda de posición: pregunto por GPS y datos en tiempo real…")
+        publish("🛰️ Consultando…")
         ut, _tu = W._bff_login(ctx)
         if not ut:
-            publish("🔑 Sonda: sesión caducada (vuelve a autenticarte). Reintento al próximo despertar")
+            publish("🔑 Sesión caducada · vuelve a autenticarte")
             _log(ctx.probe_log_path, {"event": "probe", "ok": False, "reason": "no_usertoken"})
             return {"ok": False, "reason": "no_usertoken"}
 
@@ -191,23 +190,21 @@ def probe_once(ctx, publish, force=False, on_data=None):
             try:
                 on_data(data)
             except Exception as e:
-                publish(f"⚠️ Sonda: error al publicar datos ({type(e).__name__})")
+                publish(f"⚠️ Error al publicar datos · {type(e).__name__}")
 
         if got1 or got2:
-            titular = freshness(data, now)
-            if rich:
-                bits = ", ".join(f"{k}={v}" for k, v in rich.items())
-                publish(f"{titular} {bits}")
-            else:
-                publish(titular)
+            # SIN volcar aquí los campos (velocidad, odómetro, batería…): el usuario ya los
+            # tiene en sus propios sensores, y repetirlos hacía un estado larguísimo que en una
+            # card no se lee. Siguen yendo al informe de diagnóstico y al log de la sonda, que
+            # es donde sirven de algo.
+            publish(freshness(data, now))
             return {"ok": True, "online": True, "got_data": True,
                     "codes": [c1, c2, c3], "rich": rich}
 
-        publish(f"🟡 Sonda: sin posición ni datos "
-                f"(realtime={c1} [{codes.meaning(c1)}], location={c2}, travel={c3})")
+        publish(f"🟡 Sin datos · {codes.meaning(c1)}")
         return {"ok": True, "online": False, "got_data": False, "codes": [c1, c2, c3]}
     except Exception as e:
-        publish(f"⚠️ Error de sonda: {type(e).__name__}: {e}")
+        publish(f"⚠️ Error de sonda · {type(e).__name__}: {e}")
         return {"ok": False, "reason": "exception", "error": str(e)}
     finally:
         ctx.state.probe_lock.release()

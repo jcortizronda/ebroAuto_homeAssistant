@@ -247,7 +247,7 @@ def test_probe_once_combina_los_tres_endpoints(ctx: CoreCtx) -> None:
 
 def test_freshness_con_el_coche_despierto() -> None:
     """`onlineStatus=1`: ha contestado el coche, el dato es de ahora mismo."""
-    assert "tiempo real" in probe.freshness({"onlineStatus": "1", "time": "1000"}, now=99999)
+    assert "En vivo" in probe.freshness({"onlineStatus": "1", "time": "1000"}, now=99999)
 
 
 def test_freshness_con_el_coche_dormido_dice_la_edad() -> None:
@@ -261,7 +261,7 @@ def test_freshness_con_el_coche_dormido_dice_la_edad() -> None:
 
     assert "26 min" in mensaje
     assert "dormido" in mensaje
-    assert "tiempo real" not in mensaje
+    assert "En vivo" not in mensaje
 
 
 def test_freshness_sin_marca_de_tiempo_no_se_inventa_una() -> None:
@@ -338,3 +338,21 @@ def test_la_sonda_no_afirma_que_el_coche_esta_despierto_antes_de_preguntar(
 
     assert not any("está despierto" in m for m in publicados)
     assert any("dormido" in m for m in publicados)
+
+
+def test_el_resultado_no_repite_los_sensores(ctx: CoreCtx) -> None:
+    """El estado se publica en un sensor y se lee en una card. Volcar ahí velocidad, odómetro y
+    batería lo hacía larguísimo para repetir lo que el usuario ya tiene en sus entidades; esos
+    campos siguen yendo al informe de diagnóstico y al log de la sonda, que es donde sirven."""
+    publicados: list[str] = []
+
+    with (
+        patch.object(probe.W, "_bff_login", return_value=("UT", "TU")),
+        patch.object(probe.W, "_signed_post",
+                     _post({"realtime": REALTIME_OK, "queryVehicleLocation": LOCATION_FRESCA})),
+    ):
+        res = probe.probe_once(ctx, publicados.append, force=True)
+
+    assert not any("odometer" in m or "dumpEnergy" in m for m in publicados)
+    assert max(len(m) for m in publicados) < 60      # cabe en una card sin recortarse
+    assert res["rich"]["odometer"] == "12345"        # pero el diagnóstico los conserva

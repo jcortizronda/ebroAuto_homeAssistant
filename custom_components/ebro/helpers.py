@@ -102,35 +102,31 @@ def fields(data: Mapping[str, Any] | None) -> dict[str, Any]:
 
 
 def field(data: Mapping[str, Any] | None, key: str) -> Any:
-    """El estado de un campo del vehículo, mirando LOS DOS canales.
+    """El estado de un campo del vehículo: el push MQTT si lo hay, y si no la sonda.
 
-    El coche informa de las mismas claves por dos vías distintas:
+    El coche informa de las mismas claves por dos vías:
 
-    * los push **5A02 por MQTT**, que solo llegan mientras el coche está despierto;
-    * la respuesta de la **sonda realtime**, una foto completa que se puede pedir en cualquier
-      momento.
+    * los push **5A02 por MQTT**, que el coche emite CUANDO EL ESTADO CAMBIA;
+    * la respuesta de la **sonda realtime**, que es la última instantánea que guardó la nube.
 
-    Estas entidades leían solo la primera. Con un coche que empuja por MQTT no se nota, pero con
-    uno que no lo hace —aparcado, o con la app oficial ocupando la única sesión que la nube de
-    Chery concede por cuenta— cierre, clima, puertas y maletero se quedan congelados en el
-    último valor conocido aunque la sonda esté trayendo el dato correcto en cada lectura.
+    Estas entidades leían solo la primera, y con una cuenta que no recibe MQTT se quedaban
+    congeladas. De ahí este respaldo: si el push no trae la clave, se usa la de la sonda.
 
-    **Cuál manda depende de si el coche está despierto**, no de un orden fijo, porque `fields`
-    se acumula y NUNCA se vacía:
+    **Y manda el push, siempre.** Aquí hubo antes una regla que invertía la prioridad con el
+    coche dormido, razonando que `fields` se acumula y nunca se vacía. Salió mal y de forma
+    medible: el 4 de septiembre de 2026, a las 12:21:50, el maletero se cerró y el push lo
+    reflejó; a las 12:26:51.101 venció la ventana de «coche despierto» y **2 milisegundos
+    después** la entidad volvió a «abierto», porque la instantánea de la nube seguía teniendo
+    `trunkDoor=1` de cuando sí lo estaba.
 
-    * despierto → el push es lo más fresco que hay, y la sonda rellena lo que no venga en él;
-    * dormido → lo que queda en `fields` es del último rato que estuvo despierto, así que el
-      valor bueno es el de la sonda y el push solo cubre los huecos.
-
-    Sin esa condición, cualquiera de los dos órdenes fijos deja una entidad mintiendo: MQTT
-    primero congela al coche dormido, realtime primero congela al coche en marcha entre sondas.
+    La asimetría que se pasó por alto: un push es un EVENTO —el coche lo emite porque algo
+    cambió—, mientras que la instantánea es una caché que puede ser de hace horas. Si el canal
+    MQTT funciona, para estas claves siempre va por delante; y si no funciona, `fields` está
+    vacío y el respaldo entra igual. No hacía falta invertir nada.
     """
-    primary, secondary = (fields(data), realtime(data))
-    if not (data or {}).get("awake"):
-        primary, secondary = secondary, primary
-    value = primary.get(key)
+    value = fields(data).get(key)
     if value is None:
-        value = secondary.get(key)
+        value = realtime(data).get(key)
     return value
 
 

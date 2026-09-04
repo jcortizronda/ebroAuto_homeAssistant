@@ -112,41 +112,28 @@ def test_truncate_status_respeta_el_limite_de_estado_de_ha() -> None:
 
 
 # ───────────────────────── `field`: los dos canales ─────────────────────────
-# El coche informa de las MISMAS claves por MQTT (push 5A02) y por la sonda realtime. Estas
-# entidades —cierre, clima, puertas, maletero— leían solo la primera, y con un coche que no
-# empuja por MQTT se quedaban congeladas en el último valor conocido aunque la sonda trajera
-# el dato bueno en cada lectura. Cuál manda depende de si el coche está despierto: `fields`
-# se acumula y nunca se vacía, así que dormido es historia, no estado.
+# El coche informa de las mismas claves por dos vías: los push 5A02 por MQTT (eventos: el coche
+# los emite cuando algo cambia) y la sonda realtime (la última instantánea que guardó la nube).
+# Manda el push; la sonda solo rellena huecos.
 
 
-def test_field_dormido_prefiere_la_sonda() -> None:
-    """El caso que motivó el cambio: coche aparcado, MQTT sin entregar nada, y la sonda
-    trayendo `doorLock` correcto en cada lectura."""
-    data = {"fields": {}, "realtime": {"doorLock": "1"}, "awake": False}
-    assert field(data, "doorLock") == "1"
+def test_field_prefiere_el_push_sobre_la_instantanea() -> None:
+    """El fallo del 04/09/2026, medido en el historial: el maletero se cerró a las 12:21:50 y el
+    push lo reflejó; a las 12:26:51 venció la ventana de «coche despierto» y 2 ms después la
+    entidad volvía a «abierto», porque la instantánea de la nube seguía con `trunkDoor=1`.
+
+    Había una regla que invertía la prioridad con el coche dormido. La instantánea puede ser de
+    hace horas; el push es de cuando algo cambió."""
+    data = {"fields": {"trunkDoor": "0"}, "realtime": {"trunkDoor": "1"}, "awake": False}
+
+    assert field(data, "trunkDoor") == "0"
 
 
-def test_field_dormido_ignora_el_mqtt_viejo() -> None:
-    """Lo que queda en `fields` es del último rato despierto. Si la sonda dice otra cosa, la
-    sonda es más nueva: preferir MQTT aquí es exactamente el estado congelado del bug."""
-    data = {"fields": {"doorLock": "0"}, "realtime": {"doorLock": "1"}, "awake": False}
-    assert field(data, "doorLock") == "1"
-
-
-def test_field_despierto_prefiere_el_push() -> None:
-    """Despierto se invierte: el push es de hace segundos y la sonda puede ser de hace una
-    hora (el sondeo con el coche parado está desactivado por defecto)."""
-    data = {"fields": {"doorLock": "1"}, "realtime": {"doorLock": "0"}, "awake": True}
-    assert field(data, "doorLock") == "1"
-
-
-def test_field_rellena_los_huecos_en_los_dos_sentidos() -> None:
-    """El canal que manda no siempre trae la clave: el 5A02 llega parcial y hay tres campos
-    (`hood`, `sunshadeState`, `rWinHeatingState`) que la sonda no incluye."""
-    despierto = {"fields": {"doorLock": "1"}, "realtime": {"trunkDoor": "1"}, "awake": True}
-    assert field(despierto, "trunkDoor") == "1"      # falta en el push → cae a la sonda
-    dormido = {"fields": {"hood": "1"}, "realtime": {"doorLock": "0"}, "awake": False}
-    assert field(dormido, "hood") == "1"             # falta en la sonda → cae al push
+def test_field_cae_a_la_sonda_cuando_el_push_no_trae_la_clave() -> None:
+    """El motivo por el que existe el respaldo: sin MQTT (cuentas invitadas) `fields` está
+    vacío y las entidades se quedaban congeladas."""
+    assert field({"fields": {}, "realtime": {"doorLock": "1"}}, "doorLock") == "1"
+    assert field({"fields": {"otra": "0"}, "realtime": {"doorLock": "1"}}, "doorLock") == "1"
 
 
 def test_field_sin_datos_es_none() -> None:
@@ -154,4 +141,4 @@ def test_field_sin_datos_es_none() -> None:
     restaurado en vez de un falso «cerrado»."""
     assert field(None, "doorLock") is None
     assert field({}, "doorLock") is None
-    assert field({"fields": {}, "realtime": None, "awake": False}, "doorLock") is None
+    assert field({"fields": {}, "realtime": None}, "doorLock") is None
