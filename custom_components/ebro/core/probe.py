@@ -197,11 +197,28 @@ def probe_once(ctx, publish, force=False, on_data=None):
             # tiene en sus propios sensores, y repetirlos hacía un estado larguísimo que en una
             # card no se lee. Siguen yendo al informe de diagnóstico y al log de la sonda, que
             # es donde sirven de algo.
-            publish(freshness(data, now))
+            #
+            # Pero la POSICIÓN sí se reporta aparte, porque este sensor se llama «Resultado
+            # sonda de UBICACIÓN» y hasta ahora mentía por omisión: si `realtime` contestaba y
+            # `queryVehicleLocation` no, decía «🟢 En vivo» tan tranquilo y el mapa se quedaba
+            # clavado. Cuatro días costó verlo en campo, y solo mirando el historial. El motivo
+            # lo da el código del endpoint de ubicación, que ya teníamos y se tiraba.
+            if "lat" in data and "lon" in data:
+                publish(freshness(data, now))
+            else:
+                # Decir solo «Sin posición» daría a entender que la consulta entera fracasó, y
+                # no es verdad: la telemetría (batería, autonomía, odómetro…) SÍ ha llegado y
+                # sus sensores se han actualizado. Lo que falta es la ubicación.
+                #
+                # SIN el motivo: el único que sale en la práctica es A07900, «coche en reposo»,
+                # y puesto al lado de «coche dormido» —que es lo que dicen los otros estados—
+                # parecen dos cosas distintas cuando son la misma. El código sigue yendo al log
+                # y al resultado de la sonda, que es donde hace falta para diagnosticar.
+                publish("🟠 Con datos, sin posición")
             return {"ok": True, "online": True, "got_data": True,
                     "codes": [c1, c2, c3], "rich": rich}
 
-        publish(f"🟡 Sin datos · {codes.meaning(c1)}")
+        publish(f"🔴 Sin datos · {codes.meaning(c1)}")
         return {"ok": True, "online": False, "got_data": False, "codes": [c1, c2, c3]}
     except Exception as e:
         publish(f"⚠️ Error de sonda · {type(e).__name__}: {e}")

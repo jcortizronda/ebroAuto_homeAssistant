@@ -99,8 +99,20 @@ coche**. La nube guarda el último estado que el vehículo le comunicó, y eso e
 el coche despierto ese estado es de hace segundos; con el coche aparcado y dormido puede ser de hace
 un buen rato, porque mientras duerme no informa de nada nuevo.
 
-El sensor **«Resultado sonda de ubicación»** te lo dice en cada consulta: si el dato viene del coche
-despierto o si es el último que tenía guardado la nube, y de cuándo es.
+El sensor **«Resultado sonda de ubicación»** cuenta cómo fue la última consulta:
+
+| Estado | Qué significa |
+|---|---|
+| 🟢 En vivo · coche despierto | El coche está conectado; el dato es de ahora mismo |
+| 🟡 Estado desde la nube · hace N min · coche dormido | El coche duerme; esto es lo último que la nube guardó, y de cuándo es |
+| 🟠 Con datos, sin posición | Llegó la telemetría, pero la nube no tiene una ubicación reciente. Se resuelve con «Localizar coche (GPS)» |
+| 🔴 Sin datos · … | La nube no ha devuelto nada, con el motivo |
+| ⏳ Lectura reciente · espero N s | Se acaba de consultar; se espera un poco antes de repetir |
+| 🔑 Sesión caducada · vuelve a autenticarte | Hay que volver a iniciar sesión |
+| 🛰️ Consultando… | En curso; dura un instante |
+
+La posición merece fila propia porque puede faltar aunque el resto llegue: la nube solo la tiene si
+el coche se la ha comunicado. Si te hace falta al momento, «Localizar coche (GPS)» se la pide.
 
 ### Consultar no despierta el coche
 

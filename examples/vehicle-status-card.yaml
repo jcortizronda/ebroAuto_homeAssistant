@@ -73,13 +73,44 @@ indicator_rows:
         show_entity_picture: false
         include_state_template: false
         tap_action:
-          action: toggle
+          action: perform-action
+          perform_action: button.press
+          target:
+            entity_id: button.ebro_XXXX_localizar_coche_gps
+        entity: button.ebro_XXXX_localizar_coche_gps
+        name: Forzar GPS
+        icon: mdi:crosshairs-gps
+        # Azul los 10 s siguientes a la pulsacion (acuse: el comando tarda en
+        # responder y si no, no se sabe si se ha registrado); naranja mientras
+        # falte la posicion, que es cuando este boton sirve para algo.
+        color_template: >-
+          {% set b = states('button.ebro_XXXX_localizar_coche_gps') %}{% set s =
+          states('sensor.ebro_XXXX_resultado_sonda_de_ubicacion') %}{% if b not
+          in ['unknown','unavailable'] and (now() - as_datetime(b)).total_seconds()
+          < 10 %}var(--info-color){% elif 'sin posición' in s
+          %}var(--orange-color, var(--warning-color)){% endif %}
+      - type: entity
+        show_name: false
+        show_state: false
+        show_icon: true
+        show_entity_picture: false
+        include_state_template: false
+        tap_action:
+          action: perform-action
+          perform_action: button.press
+          target:
+            entity_id: button.ebro_XXXX_actualizar_ubicacion
         entity: button.ebro_XXXX_actualizar_ubicacion
         name: Actualizar datos
         color_template: >-
-          {{ 'blue' if (as_timestamp(now()) -
-          as_timestamp(states.sensor.ebro_XXXX_resultado_sonda_de_ubicacion.last_changed))
-          < 10 else '' }}
+          {% set o = states.sensor.ebro_XXXX_resultado_sonda_de_ubicacion %}{%
+          if o is none or (now() - o.last_updated).total_seconds() > 20 %}{%
+          else %}{% set s = o.state %}{% if '🛰' in s or '⏳' in s
+          %}var(--info-color){% elif '⚠' in s or '🔑' in s or '🔴' in s
+          %}var(--error-color){% elif '🟢' in s or '✅' in s
+          %}var(--success-color){% elif '🟠' in s %}var(--orange-color,
+          var(--warning-color)){% elif '🟡' in s %}var(--warning-color){% endif
+          %}{% endif %}
         icon: mdi:update
     alignment: end
     no_wrap: true
@@ -113,6 +144,16 @@ indicator_rows:
         icon: mdi:car-key
         show_name: true
         show_icon: true
+        show_state: true
+        include_state_template: true
+        state_content:
+          - state_template
+        state_template: >-
+          {% set ab =
+          expand(['cover.ebro_XXXX_ventanillas','cover.ebro_XXXX_techo_solar','cover.ebro_XXXX_maletero'])
+          | rejectattr('state','in',['closed','unknown','unavailable']) | list
+          %}{{ ab | map(attribute='name') | map('replace','S900 ','') | join(' ·
+          ') if ab else 'Todo cerrado' }}
       - type: group
         name: Batería AT
         icon: mdi:battery
@@ -126,10 +167,15 @@ indicator_rows:
               action: more-info
         include_state_template: true
         show_name: true
-        show_state: false
+        show_state: true
         state_content:
           - state_template
         show_icon: true
+        state_template: >-
+          {{ (states('sensor.ebro_XXXX_tension_bateria_at') | float(0) |
+          round(1)) | string | replace('.',',') }} V · {{
+          (states('sensor.ebro_XXXX_corriente_bateria_at') | float(0) |
+          round(1)) | string | replace('.',',') }} A
     alignment: default
     no_wrap: true
   - row_items:
@@ -186,11 +232,22 @@ indicator_rows:
               action: more-info
             name: Ventilar Ventanillas
         show_name: true
-        show_state: false
+        show_state: true
         show_icon: true
         row_reverse: false
-        include_state_template: false
+        include_state_template: true
         icon: mdi:snowflake
+        state_content:
+          - state_template
+        state_template: >-
+          {% set n =
+          expand(['switch.ebro_XXXX_ventilacion_asiento_conductor','switch.ebro_XXXX_ventilacion_asiento_pasajero','switch.ebro_XXXX_ventilacion_asiento_tras_izquierdo','switch.ebro_XXXX_ventilacion_asiento_tras_derecho','switch.ebro_XXXX_desempanado_del_parabrisas'])
+          | selectattr('state','eq','on') | list | count %}{{ (n ~ ' activo' ~
+          ('s' if n > 1 else '')) if n else 'Sin activar' }}
+        color_template: >-
+          {{ 'var(--info-color)' if
+          expand(['switch.ebro_XXXX_ventilacion_asiento_conductor','switch.ebro_XXXX_ventilacion_asiento_pasajero','switch.ebro_XXXX_ventilacion_asiento_tras_izquierdo','switch.ebro_XXXX_ventilacion_asiento_tras_derecho','switch.ebro_XXXX_desempanado_del_parabrisas'])
+          | selectattr('state','eq','on') | list | count > 0 else '' }}
       - type: group
         name: Calefacción
         items:
@@ -238,8 +295,20 @@ indicator_rows:
             name: Luneta Térmica
         icon: mdi:heat-wave
         show_name: true
-        show_state: false
+        show_state: true
         show_icon: true
+        include_state_template: true
+        state_content:
+          - state_template
+        state_template: >-
+          {% set n =
+          expand(['switch.ebro_XXXX_calefaccion_del_volante','switch.ebro_XXXX_calefaccion_asiento_conductor','switch.ebro_XXXX_calefaccion_asiento_pasajero','switch.ebro_XXXX_calefaccion_asiento_tras_derecho','switch.ebro_XXXX_calefaccion_asiento_tras_izquierdo','switch.ebro_XXXX_calefaccion_de_la_luneta'])
+          | selectattr('state','eq','on') | list | count %}{{ (n ~ ' activo' ~
+          ('s' if n > 1 else '')) if n else 'Sin activar' }}
+        color_template: >-
+          {{ 'var(--warning-color)' if
+          expand(['switch.ebro_XXXX_calefaccion_del_volante','switch.ebro_XXXX_calefaccion_asiento_conductor','switch.ebro_XXXX_calefaccion_asiento_pasajero','switch.ebro_XXXX_calefaccion_asiento_tras_derecho','switch.ebro_XXXX_calefaccion_asiento_tras_izquierdo','switch.ebro_XXXX_calefaccion_de_la_luneta'])
+          | selectattr('state','eq','on') | list | count > 0 else '' }}
   - row_items:
       - type: entity
         show_name: true
@@ -279,15 +348,15 @@ range_info:
       value_position: outside
       hide_icon: false
       icon_state_color: false
-    progress_color: "#277213"
-    charging_template: "{{ is_state('sensor.ebro_XXXX_estado_de_carga', 'Cargando') }}"
+    progress_color: '#277213'
+    charging_template: '{{ is_state(''sensor.ebro_XXXX_estado_de_carga'', ''Cargando'') }}'
     color_blocks: false
     color_thresholds: []
     charging_entity: sensor.ebro_XXXX_estado_de_carga
     bar_height: 8
     charge_target_entity: number.ebro_XXXX_limite_de_carga
     charge_target_tooltip: true
-    charge_target_visibility: "{{ is_state('switch.ebro_XXXX_limitar_carga_al_porcentaje', 'on') }}"
+    charge_target_visibility: '{{ is_state(''switch.ebro_XXXX_limitar_carga_al_porcentaje'', ''on'') }}'
   - energy_level:
       entity: sensor.ebro_XXXX_combustible_restante
       tap_action:
@@ -299,7 +368,7 @@ range_info:
       entity: sensor.ebro_XXXX_autonomia_gasolina
       value_position: outside
       hide_icon: false
-    progress_color: "#283ac8"
+    progress_color: '#283ac8'
     color_blocks: false
     color_thresholds: []
     bar_height: 8
@@ -336,7 +405,7 @@ button_cards:
             - entity: binary_sensor.ebro_XXXX_ventanilla_del_derecha
             - entity: binary_sensor.ebro_XXXX_ventanilla_del_izquierda
             - entity: binary_sensor.ebro_XXXX_ventanilla_tras_derecha
-            - entity: binary_sensor.ebro_XXXX_ventanilla_del_izquierda
+            - entity: binary_sensor.ebro_XXXX_ventanilla_tras_izquierda
           collapsed_items: true
           state_color: true
         - title: Puertas
@@ -353,6 +422,45 @@ button_cards:
             - entity: binary_sensor.ebro_XXXX_capo
           state_color: true
           collapsed_items: true
+    color_template: >-
+      {% set avisos =
+      ['binary_sensor.ebro_XXXX_bateria_baja','binary_sensor.ebro_XXXX_aviso_de_carga_necesaria','binary_sensor.ebro_XXXX_aviso_de_combustible_bajo','binary_sensor.ebro_XXXX_aviso_neumatico_del_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_del_izquierdo','binary_sensor.ebro_XXXX_aviso_neumatico_tras_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_tras_izquierdo']
+      %}{% set aperturas =
+      ['binary_sensor.ebro_XXXX_ventanilla_del_derecha','binary_sensor.ebro_XXXX_ventanilla_del_izquierda','binary_sensor.ebro_XXXX_ventanilla_tras_derecha','binary_sensor.ebro_XXXX_ventanilla_tras_izquierda','binary_sensor.ebro_XXXX_puerta_del_izquierda','binary_sensor.ebro_XXXX_puerta_del_derecha','binary_sensor.ebro_XXXX_puerta_tras_izquierda','binary_sensor.ebro_XXXX_puerta_tras_derecha','cover.ebro_XXXX_maletero','binary_sensor.ebro_XXXX_capo']
+      %}{{ 'var(--error-color)' if expand(avisos) |
+      selectattr('state','eq','on') | list | count > 0 else
+      ('var(--warning-color)' if expand(aperturas) |
+      selectattr('state','in',['on','open']) | list | count > 0 else '') }}
+    include_state_template: true
+    state_template: >-
+      {% set av =
+      expand(['binary_sensor.ebro_XXXX_bateria_baja','binary_sensor.ebro_XXXX_aviso_de_carga_necesaria','binary_sensor.ebro_XXXX_aviso_de_combustible_bajo','binary_sensor.ebro_XXXX_aviso_neumatico_del_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_del_izquierdo','binary_sensor.ebro_XXXX_aviso_neumatico_tras_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_tras_izquierdo'])
+      | selectattr('state','eq','on') | list | count %}{% set ap =
+      expand(['binary_sensor.ebro_XXXX_ventanilla_del_derecha','binary_sensor.ebro_XXXX_ventanilla_del_izquierda','binary_sensor.ebro_XXXX_ventanilla_tras_derecha','binary_sensor.ebro_XXXX_ventanilla_tras_izquierda','binary_sensor.ebro_XXXX_puerta_del_izquierda','binary_sensor.ebro_XXXX_puerta_del_derecha','binary_sensor.ebro_XXXX_puerta_tras_izquierda','binary_sensor.ebro_XXXX_puerta_tras_derecha','cover.ebro_XXXX_maletero','binary_sensor.ebro_XXXX_capo'])
+      | selectattr('state','in',['on','open']) | list | count %}{% set p = []
+      %}{% if av %}{% set p = p + [av ~ ' aviso' ~ ('s' if av > 1 else '')] %}{%
+      endif %}{% if ap %}{% set p = p + [ap ~ ' abierta' ~ ('s' if ap > 1 else
+      '')] %}{% endif %}{{ p | join(' · ') if p else 'Todo correcto' }}
+    notify: >-
+      {% set av =
+      expand(['binary_sensor.ebro_XXXX_bateria_baja','binary_sensor.ebro_XXXX_aviso_de_carga_necesaria','binary_sensor.ebro_XXXX_aviso_de_combustible_bajo','binary_sensor.ebro_XXXX_aviso_neumatico_del_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_del_izquierdo','binary_sensor.ebro_XXXX_aviso_neumatico_tras_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_tras_izquierdo'])
+      | selectattr('state','eq','on') | list | count %}{% set ap =
+      expand(['binary_sensor.ebro_XXXX_ventanilla_del_derecha','binary_sensor.ebro_XXXX_ventanilla_del_izquierda','binary_sensor.ebro_XXXX_ventanilla_tras_derecha','binary_sensor.ebro_XXXX_ventanilla_tras_izquierda','binary_sensor.ebro_XXXX_puerta_del_izquierda','binary_sensor.ebro_XXXX_puerta_del_derecha','binary_sensor.ebro_XXXX_puerta_tras_izquierda','binary_sensor.ebro_XXXX_puerta_tras_derecha','cover.ebro_XXXX_maletero','binary_sensor.ebro_XXXX_capo'])
+      | selectattr('state','in',['on','open']) | list | count %}{{ 'x' if av +
+      ap > 0 else '' }}
+    notify_text: >-
+      {% set av =
+      expand(['binary_sensor.ebro_XXXX_bateria_baja','binary_sensor.ebro_XXXX_aviso_de_carga_necesaria','binary_sensor.ebro_XXXX_aviso_de_combustible_bajo','binary_sensor.ebro_XXXX_aviso_neumatico_del_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_del_izquierdo','binary_sensor.ebro_XXXX_aviso_neumatico_tras_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_tras_izquierdo'])
+      | selectattr('state','eq','on') | list | count %}{% set ap =
+      expand(['binary_sensor.ebro_XXXX_ventanilla_del_derecha','binary_sensor.ebro_XXXX_ventanilla_del_izquierda','binary_sensor.ebro_XXXX_ventanilla_tras_derecha','binary_sensor.ebro_XXXX_ventanilla_tras_izquierda','binary_sensor.ebro_XXXX_puerta_del_izquierda','binary_sensor.ebro_XXXX_puerta_del_derecha','binary_sensor.ebro_XXXX_puerta_tras_izquierda','binary_sensor.ebro_XXXX_puerta_tras_derecha','cover.ebro_XXXX_maletero','binary_sensor.ebro_XXXX_capo'])
+      | selectattr('state','in',['on','open']) | list | count %}{{ av + ap }}
+    notify_color: >-
+      {% set av =
+      expand(['binary_sensor.ebro_XXXX_bateria_baja','binary_sensor.ebro_XXXX_aviso_de_carga_necesaria','binary_sensor.ebro_XXXX_aviso_de_combustible_bajo','binary_sensor.ebro_XXXX_aviso_neumatico_del_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_del_izquierdo','binary_sensor.ebro_XXXX_aviso_neumatico_tras_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_tras_izquierdo'])
+      | selectattr('state','eq','on') | list | count %}{% set ap =
+      expand(['binary_sensor.ebro_XXXX_ventanilla_del_derecha','binary_sensor.ebro_XXXX_ventanilla_del_izquierda','binary_sensor.ebro_XXXX_ventanilla_tras_derecha','binary_sensor.ebro_XXXX_ventanilla_tras_izquierda','binary_sensor.ebro_XXXX_puerta_del_izquierda','binary_sensor.ebro_XXXX_puerta_del_derecha','binary_sensor.ebro_XXXX_puerta_tras_izquierda','binary_sensor.ebro_XXXX_puerta_tras_derecha','cover.ebro_XXXX_maletero','binary_sensor.ebro_XXXX_capo'])
+      | selectattr('state','in',['on','open']) | list | count %}{{
+      'var(--error-color)' if av > 0 else 'var(--warning-color)' }}
   - show_icon: true
     show_primary: true
     show_secondary: true
@@ -398,6 +506,20 @@ button_cards:
         aspect_ratio: 1/1
         # background: [ENLACE A IMAGEN LOCAL. CONFIGURAR EN GUI DE TARJETA - sugerida: examples/S900_Top.png]
         elements: []
+    include_state_template: true
+    state_template: >-
+      {% set n =
+      expand(['binary_sensor.ebro_XXXX_aviso_neumatico_del_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_del_izquierdo','binary_sensor.ebro_XXXX_aviso_neumatico_tras_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_tras_izquierdo'])
+      | selectattr('state','eq','on') | list | count %}{% if n %}{{ n }} aviso{{
+      's' if n > 1 }} de presión{% else %}{% set p =
+      expand(['sensor.ebro_XXXX_presion_neumatico_del_izquierdo','sensor.ebro_XXXX_presion_neumatico_del_derecho','sensor.ebro_XXXX_presion_neumatico_tras_izquierdo','sensor.ebro_XXXX_presion_neumatico_tras_derecho'])
+      | map(attribute='state') | map('float',0) | list %}{{
+      ('%.2f'|format(p|min)) | replace('.',',') }} – {{ ('%.2f'|format(p|max)) |
+      replace('.',',') }} bar{% endif %}
+    color_template: >-
+      {{ 'var(--error-color)' if
+      expand(['binary_sensor.ebro_XXXX_aviso_neumatico_del_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_del_izquierdo','binary_sensor.ebro_XXXX_aviso_neumatico_tras_derecho','binary_sensor.ebro_XXXX_aviso_neumatico_tras_izquierdo'])
+      | selectattr('state','eq','on') | list | count > 0 else '' }}
   - show_icon: true
     show_primary: true
     show_secondary: true
@@ -420,6 +542,8 @@ button_cards:
             - entity: sensor.ebro_XXXX_puerto_de_carga_rapida
             - entity: sensor.ebro_XXXX_estado_de_carga
             - entity: sensor.ebro_XXXX_estado_de_carga_programada
+            - entity: sensor.ebro_XXXX_carga_programada_en_el_coche
+              name: Programada en el coche
             - entity: sensor.ebro_XXXX_tiempo_de_carga_restante
           state_color: true
         - title: Configuración de Carga
@@ -428,9 +552,23 @@ button_cards:
             - entity: time.ebro_XXXX_hora_de_inicio_de_la_carga
             - entity: time.ebro_XXXX_duracion_de_la_carga
             - entity: button.ebro_XXXX_aplicar_carga_programada
+              state_template: '{{ ''Pulsa'' }}'
             - entity: switch.ebro_XXXX_limitar_carga_al_porcentaje
             - entity: number.ebro_XXXX_limite_de_carga
           state_color: true
+    color_template: >-
+      {% set c = states('sensor.ebro_XXXX_estado_de_carga') %}{% set gun =
+      is_state('binary_sensor.ebro_XXXX_cable_de_carga_conectado','on') %}{{
+      'var(--warning-color)' if c == 'Cargando' else ('var(--success-color)' if
+      c == 'Carga completada' else ('var(--info-color)' if gun else '')) }}
+    include_state_template: true
+    state_template: >-
+      {% set c = states('sensor.ebro_XXXX_estado_de_carga') %}{% set g =
+      is_state('binary_sensor.ebro_XXXX_cable_de_carga_conectado','on') %}{% set
+      t = states('sensor.ebro_XXXX_tiempo_de_carga_restante') %}{% if c ==
+      'Cargando' %}Cargando{{ ' · ' ~ t if t not in ['unknown','unavailable']
+      else '' }}{% elif c == 'Carga completada' %}Carga completada{% elif g
+      %}Enchufado, en espera{% else %}Desenchufado{% endif %}
   - show_icon: true
     show_primary: true
     show_secondary: true
@@ -441,10 +579,16 @@ button_cards:
     card_type: default
     icon_type: icon
     primary_info: name
-    entity: sensor.ebro_XXXX_ultima_ubicacion
+    entity: sensor.ebro_XXXX_datos_del_coche_actualizados
     transparent: true
     secondary_multiline: true
     include_state_template: true
     state_content:
+      - state
       - state_template
-    icon: mdi:crosshairs
+    icon: mdi:database-clock
+    name: Datos actualizados
+    state_template: >-
+      {% set t = states('sensor.ebro_XXXX_ultima_ubicacion') %}{{ 'GPS ?' if t
+      in ['unknown','unavailable'] else 'GPS ' ~ (as_timestamp(t) |
+      timestamp_custom('%d/%m %H:%M')) }}

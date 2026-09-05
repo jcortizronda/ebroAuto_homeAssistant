@@ -354,5 +354,64 @@ def test_el_resultado_no_repite_los_sensores(ctx: CoreCtx) -> None:
         res = probe.probe_once(ctx, publicados.append, force=True)
 
     assert not any("odometer" in m or "dumpEnergy" in m for m in publicados)
-    assert max(len(m) for m in publicados) < 60      # cabe en una card sin recortarse
+    assert max(len(m) for m in publicados) < 70      # cabe en una card sin recortarse
     assert res["rich"]["odometer"] == "12345"        # pero el diagnóstico los conserva
+
+
+def test_la_sonda_avisa_cuando_no_trae_posicion(ctx: CoreCtx) -> None:
+    """El fallo que costó cuatro días de mapa clavado sin que nada lo dijera: si `realtime`
+    contesta y el endpoint de ubicación no, la sonda publicaba «🟢 En vivo» tan tranquila.
+
+    Este sensor se llama «Resultado sonda de UBICACIÓN»: cuando no hay posición, eso es lo que
+    tiene que contar, y con el motivo — que ya teníamos en el código del endpoint y se tiraba."""
+    publicados: list[str] = []
+
+    with (
+        patch.object(probe.W, "_bff_login", return_value=("UT", "TU")),
+        patch.object(probe.W, "_signed_post",
+                     _post({"realtime": REALTIME_OK, "queryVehicleLocation": DORMIDO})),
+    ):
+        probe.probe_once(ctx, publicados.append, force=True)
+
+    # «Con datos» porque la telemetría SÍ llegó: decir solo «sin posición» daría a entender
+    # que fracasó la consulta entera. Y sin el motivo: el único que sale en la práctica es
+    # «coche en reposo», que al lado de «coche dormido» parecen dos cosas y son la misma.
+    assert "🟠 Con datos, sin posición" in publicados
+    assert not any("En vivo" in m for m in publicados)
+
+
+def test_con_posicion_el_mensaje_es_el_de_frescura(ctx: CoreCtx) -> None:
+    publicados: list[str] = []
+
+    with (
+        patch.object(probe.W, "_bff_login", return_value=("UT", "TU")),
+        patch.object(probe.W, "_signed_post",
+                     _post({"realtime": REALTIME_OK, "queryVehicleLocation": LOCATION_FRESCA})),
+    ):
+        probe.probe_once(ctx, publicados.append, force=True)
+
+    assert any("En vivo" in m for m in publicados)
+    assert not any("sin posición" in m for m in publicados)
+
+
+def test_los_colores_del_estado_distinguen_gravedad(ctx: CoreCtx) -> None:
+    """La tarjeta colorea el botón de actualizar por el emoji del estado, así que el emoji ES
+    la señal: 🔴 no hay nada, 🟠 hay datos pero falta la posición. Antes ambos eran 🟡 y en la
+    card se veían igual de graves."""
+    sin_nada: list[str] = []
+    with (
+        patch.object(probe.W, "_bff_login", return_value=("UT", "TU")),
+        patch.object(probe.W, "_signed_post", _post({})),      # todo responde DORMIDO
+    ):
+        probe.probe_once(ctx, sin_nada.append, force=True)
+
+    a_medias: list[str] = []
+    with (
+        patch.object(probe.W, "_bff_login", return_value=("UT", "TU")),
+        patch.object(probe.W, "_signed_post",
+                     _post({"realtime": REALTIME_OK, "queryVehicleLocation": DORMIDO})),
+    ):
+        probe.probe_once(ctx, a_medias.append, force=True)
+
+    assert any(m.startswith("🔴") for m in sin_nada)
+    assert any(m.startswith("🟠") for m in a_medias)

@@ -228,7 +228,7 @@ diff antes.
 
 ```bash
 cd my_develops/ebroAuto_homeAssistant
-.venv-test/bin/pytest tests/ -n 4          # 672 tests, 274 snapshots
+.venv-test/bin/pytest tests/ -n 4          # 675 tests, 274 snapshots
 .venv-test/bin/ruff check custom_components tests
 ```
 
