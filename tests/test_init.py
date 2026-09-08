@@ -40,6 +40,31 @@ async def test_todas_las_entidades(
 
 
 @pytest.mark.usefixtures("init_integration")
+async def test_el_arranque_no_registra_ningun_error(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Arrancar limpio, sin nada en rojo en el log.
+
+    Esto existe por un fallo que se coló hasta una release: `sensor.py` llamaba a `add(ents)`
+    DOS veces, así que cada sensor se añadía dos veces y la segunda reventaba con
+    «Entity ... cannot be added a second time» — 36 errores en cada arranque.
+
+    Ningún test lo vio, y por una razón que conviene entender: añadir dos veces no duplica
+    nada en el registro (el segundo intento falla y Home Assistant lo captura por entidad), así
+    que los recuentos y los snapshots seguían cuadrando. Lo único que delataba el fallo era el
+    log, y nadie lo estaba mirando.
+
+    **`get_records("setup")` y no `caplog.records`**: el arranque ocurre en la fixture
+    `init_integration`, o sea en la fase de SETUP de pytest, y `caplog.records` solo trae la
+    fase de CALL. La primera versión de este test miraba `caplog.records`, veía cero registros
+    y pasaba con el fallo delante — un guardarraíl que no guarda nada es peor que ninguno,
+    porque da confianza."""
+    errores = [r for r in caplog.get_records("setup") if r.levelname == "ERROR"]
+
+    assert not errores, [r.getMessage() for r in errores]
+
+
+@pytest.mark.usefixtures("init_integration")
 async def test_dispositivo(
     device_registry: dr.DeviceRegistry, snapshot: SnapshotAssertion
 ) -> None:

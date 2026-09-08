@@ -242,8 +242,6 @@ async def async_setup_entry(
     ents.append(EbroChargeScheduleSensor(coord))
     add(ents)
 
-    add(ents)
-
 
 class _EbroRestoreSensor(EbroEntity, RestoreSensor):
     """Base de sensor Ebro Auto que sobrevive al reinicio de HA.
