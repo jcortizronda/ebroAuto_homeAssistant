@@ -138,6 +138,21 @@ _OVERRIDE_CHECKPASSWORD: dict[str, Classification] = {
     # PIN/contraseña erróneos: los únicos que de verdad deben contar para el bloqueo.
     "A00285": _entry(reason=REASON_PIN, counts_for_lockout=True),
     "A00282": _entry(reason=REASON_PIN, counts_for_lockout=True),
+    # A07908/A07909: PIN erróneo, CONFIRMADO en campo el 2026-10-01 — el usuario recordó el PIN
+    # bueno y el comando salió a la primera, en la misma cuenta y con el mismo código de error
+    # que llevaba toda la mañana.
+    #
+    # Estuvieron unas horas clasificados como «no es el PIN» por un razonamiento que parecía
+    # solidísimo: la app aceptaba el PIN que a nosotros nos fallaba. Lo que no se vio es que la
+    # app estaba aceptando el PIN NUEVO de otra cuenta. La deducción era impecable y la premisa
+    # falsa, y el precio de equivocarse aquí no lo paga el software — lo paga la cuenta del
+    # usuario, porque sin `counts_for_lockout` el anti-bloqueo deja de frenar un PIN erróneo de
+    # verdad y Chery acaba bloqueando la cuenta.
+    #
+    # Por eso van explícitos y no apoyados en la regla por defecto: para que se vea que son una
+    # medida y no una suposición.
+    "A07908": _entry(reason=REASON_PIN, counts_for_lockout=True),
+    "A07909": _entry(reason=REASON_PIN, counts_for_lockout=True),
 }
 
 # Código nunca visto. La asimetría es intencionada — ver el docstring del módulo.

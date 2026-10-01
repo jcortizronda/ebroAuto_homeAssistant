@@ -90,9 +90,10 @@ eso una entidad optimista se corrige sola cuando el coche no pudo ejecutar.
 | `config_flow.py` | Alta (teléfono + contraseña → descubrir VIN), reautenticación, opciones. |
 | `diagnostics.py` | «Descargar diagnóstico», con lo sensible ya ocultado. |
 | `repairs.py` | Arregla el aviso de PIN erróneo sin desmontar la integración. |
+| `services.py` | `ebro.programar_carga`: hora, duración y activación en una llamada. |
 | `sensor.py`, `binary_sensor.py` | Lecturas del 5A02 y del canal realtime, desde tablas de specs. |
 | `switch.py`, `climate.py`, `lock.py`, `cover.py`, `button.py` | Actuadores: estado + comandos en una entidad. |
-| `number.py`, `time.py` | Preferencias locales. No mandan nada al coche. |
+| `number.py`, `time.py` | Preferencias locales. No mandan nada al coche — ver «Qué actúa y qué guarda». |
 | `device_tracker.py` | Posición en el mapa. |
 | `const.py` | Constantes por secciones, con la comprobación en campo que justifica cada valor. |
 | `helpers.py` | `to_float`, `field_on`, `field`, `realtime`. Funciones puras. |
@@ -135,6 +136,62 @@ eso una entidad optimista se corrige sola cuando el coche no pudo ejecutar.
 | `vehicles.py` | `queryList` y su parseo (llega bajo cuatro claves distintas). |
 | `ebro_login.py`, `ebro_auth.py`, `tsp_sign.py` | Login OAuth, cabeceras firmadas, firma del cuerpo. |
 
+## Glosario
+
+Los nombres del código están en inglés —es la convención de Home Assistant y de Python, y lo que
+hace que alguien que venga de otra integración se oriente— pero las explicaciones están en
+castellano. Esta tabla es el puente entre las dos cosas: qué es cada término cuando aparece en el
+código, en un mensaje de commit o en una conversación.
+
+### Los dos canales
+
+| Término | Qué es |
+|---|---|
+| **MQTT** / *push* | El coche **envía** por su cuenta cuando algo cambia. Gratis e inmediato, pero solo mientras está despierto. Trae puertas, cierre, maletero, techo, cable y motor. |
+| **5A02** | El tipo de mensaje MQTT que trae ese estado de carrocería. Si lees «un 5A02», es «un aviso del coche». |
+| **1301** | El tipo de mensaje MQTT que traería la **posición**. Este coche no lo envía nunca. |
+| **110D** | Un mensaje MQTT de **confirmación de comando**: el coche acusa que ha ejecutado algo. |
+| **realtime** | El bloque de datos que devuelve la nube cuando le **preguntamos**: batería, autonomía, odómetro, neumáticos. |
+| **`fields`** | Lo último que llegó por MQTT. Se acumula y **nunca se vacía**, así que con el coche dormido es historia. |
+| **sonda** / *probe* | Una consulta a la nube. **No despierta el coche**: pregunta al servidor, no al vehículo. |
+
+### La sonda y el bucle
+
+| Término | Qué es |
+|---|---|
+| **`async_probe()`** | Ejecutar una sonda. La usan el botón «Actualizar ubicación», el bucle y el flanco de despertar. |
+| **`force=True`** | «Sáltate el margen de espera entre sondas». Lo usan los caminos automáticos y el botón manual. |
+| **cooldown** | El margen de 120 s entre sondas, para no machacar la nube. |
+| **`schedule_next()`** | Decidir **cuándo será la siguiente** sonda y programarla. Es el único sitio donde el bucle puede pararse. |
+| **`hv_followup`** | La línea que `schedule_next()` escribe en el diagnóstico. **Una línea = una sonda completada.** |
+| **`every_s`** | En esa línea, los segundos hasta la **próxima** sonda. NO es lo que se ha tardado. |
+| **ráfaga** / *burst* | Cinco o más mensajes MQTT en 30 s. Es como se detecta que el coche circula. |
+| **AT** / *alta tensión* | La batería de tracción encendida. Es lo que distingue «en marcha» de «parado». |
+
+### Comandos
+
+| Término | Qué es |
+|---|---|
+| **comando** | Una **orden** al coche: abrir, cerrar, clima, localizar. Sí lo despierta. Requiere PIN. |
+| **`taskId`** | El permiso temporal que da el backend tras validar el PIN. Sin él no se ejecuta ningún comando. |
+| **`checkPassword`** | La llamada que valida el PIN y entrega el `taskId`. **Cada fallo acerca el bloqueo de la cuenta.** |
+| **anti-bloqueo** | El freno propio que deja de preguntar tras varios PIN rechazados, para no llegar a ese bloqueo. |
+| **optimismo** | Tras un comando, la entidad muestra el objetivo antes de que el coche confirme, para que la interfaz no se quede quieta. |
+| **`queryVehicleLocation`** | **Consulta** la última posición que sabe la nube. No pide nada al coche. |
+| **`vehicleLocation`** | El **comando** «Localizar coche (GPS)». Despierta el coche para que reporte dónde está. |
+
+### Piezas del código
+
+| Término | Qué es |
+|---|---|
+| **coordinator** | La pieza central: tiene el estado del coche y lo reparte a todas las entidades. |
+| **entidad** / *entity* | Cada cosa que ves en Home Assistant: un sensor, un interruptor, un botón. |
+| **plataforma** / *platform* | El archivo que crea las entidades de un tipo: `sensor.py`, `switch.py`, `lock.py`… |
+| **`unique_id`** | El identificador que ata una entidad a su histórico. **Cambiarlo borra el historial del usuario.** |
+| **snapshot** | Una foto guardada de cómo quedan las entidades. Si un test de snapshot falla, algo se ha movido. |
+| **config entry** | La configuración de la integración: credenciales, VIN, intervalos. |
+| **Repair** | Un aviso accionable de Home Assistant, con su botón para arreglar lo que sea. |
+
 ## Cosas que conviene saber antes de tocar
 
 **El estado del coche está tras un lock, y no se puede sortear.** Lo tocan tres hilos: paho,
@@ -158,20 +215,51 @@ entidad muestra el objetivo, porque el coche tarda en confirmar. Ese objetivo ce
 llega un push MQTT (`last_seen`) **o** una sonda con contenido distinto (`car_data_ts`).
 Anclarlo solo a MQTT dejaba el objetivo clavado para siempre en un coche que no empuja.
 
-**El canal MQTT solo entrega en la cuenta propietaria del vehículo.** El topic va contra el id de
-usuario (`app/<canal>/<tuserid>/account/msgCenter/msg`). Con una cuenta invitada el broker acepta
-la conexión y **concede la suscripción** —`car_subscribed: true`, «Granted QoS 1»— pero ahí no se
-publica nada. Comprobado en las dos direcciones sobre la misma instalación. El porqué no lo sabemos:
-el REST sí responde igual para las dos cuentas, así que no es una falta de permisos sobre el
-vehículo. Por eso el diagnóstico distingue conectado de suscrito: sin esa distinción, la única
-pista era un `fields_count: 0` que también significa «el coche está dormido».
+**El canal MQTT solo existe para la cuenta PROPIETARIA del vehículo.** El topic va contra el id
+de usuario (`app/<canal>/<tuserid>/account/msgCenter/msg`). Con una cuenta delegada el broker
+acepta la conexión y **concede la suscripción** —`car_subscribed: true`, «Granted QoS 1»— y ahí
+no se publica jamás nada: ni los avisos del coche, ni siquiera la confirmación de un comando que
+esa misma cuenta acaba de ejecutar con éxito.
 
-Queda un cabo suelto: **la app oficial, con esa misma cuenta secundaria, refleja las aperturas al
-instante**. Medido: instantáneo, o sea push — hay algo publicándose en un topic que no conocemos,
-porque solo tenemos el que se dedujo del APK. Para averiguar cuál, con el monitor de diagnóstico
-encendido la suscripción pasa del topic exacto al comodín `app/<canal>/<tuserid>/#`, y todo lo que
-llegue por un topic distinto del conocido se APUNTA sin tocar el estado. Si la ACL deniega el
-comodín, se vuelve solo al topic exacto: pedir de más no puede dejar la integración sin escuchar.
+**No hay ningún topic que buscar, y esto hay que leerlo entero antes de intentarlo.** Una versión
+anterior de este documento decía que la app oficial, con esa misma cuenta delegada, sí recibía los
+avisos al instante, y concluía que existía un topic desconocido. **Es falso.** Un análisis del
+tráfico de la app (01/10/2026, con VPN y descifrado del HTTPS) midió que:
+
+* con la cuenta delegada **el broker RECHAZA el CONNECT de la propia app oficial**: responde 4
+  bytes y cierra a los ~0,5 s, y la app reintenta en bucle cada ~3,6 s indefinidamente;
+* lo que hace la app para parecer instantánea es **preguntar a `/asr/manager/realtime` cada 5,0
+  segundos**. Los avisos en pantalla salieron 0,5–1,2 s después de la respuesta en la que
+  `doorLock` cambiaba;
+* con la cuenta titular el broker sí acepta, y cada conexión recibe un volcado de ~9,7 kB al
+  conectar.
+
+La conclusión práctica: **la diferencia no está en nuestro cliente.** Se descartaron una a una,
+con medidas, dieciséis hipótesis —el id de cuenta, el coche predeterminado, `passwordType`, el
+`authorizeType`, el clientId exacto de la app (que además tira la conexión en bucle), los campos
+de identificación de dispositivo, la ventana de la delegación y la lista de 329 permisos, que solo
+difiere en «Seguridad», «Ajustes de seguridad», «Zona de seguridad» y «Enviar al coche»—. Ninguna
+era la causa, porque no hay nada roto que arreglar: para una cuenta delegada ese canal no existe.
+
+Lo que la integración hace al respecto es **avisar**: `coordinator.async_review_delegated_account`
+levanta una Reparación cuando `authorizeType == 1`, explicando que los estados no se moverán solos
+y que la salida es configurar los intervalos de consulta. No es reparable porque no hay nada que
+reparar.
+
+Por eso el diagnóstico distingue conectado de suscrito: sin esa distinción, la única pista era un
+`fields_count: 0` que también significa «el coche está dormido».
+
+**Qué ACTÚA y qué GUARDA.** Los botones, interruptores, candados, persianas y el clima mandan
+comandos: tocarlos es consentimiento explícito. Los `number` y los `time` solo guardan una
+preferencia que otro control usará al enviar. Por eso programar la carga son tres pasos (hora,
+duración, «Aplicar») en vez de uno: se valoró hacer que las horas escribiesen directas al coche y
+se descartó, porque mover un control por accidente le daría órdenes.
+
+Esa separación es buena para la interfaz y mala para una automatización, que tendría que encadenar
+tres llamadas y confiar en el orden. De ahí `ebro.programar_carga`: una llamada a un servicio es
+un acto explícito igual que pulsar un botón, así que respeta el mismo principio. Y por el mismo
+criterio, «Parar carga» es un BOTÓN y no un servicio — no lleva parámetros, y un servicio sin
+campos no se puede poner en una tarjeta ni sale en la página del dispositivo.
 
 **`queryVehicleLocation` LEE la última posición; `vehicleLocation` la PIDE.** Los nombres lo
 dicen y la diferencia se nota: la sonda usa la consulta —devuelve lo último que sabe la nube,
@@ -207,8 +295,27 @@ auto-reprograma, así que `PollController.schedule_next()` es el único sitio do
 detenerse. Una lectura que regrese tras descargar la integración intentaría rearmar el timer:
 lo impide `TimerRegistry.close()`, que prohíbe cualquier `arm()` posterior.
 
+**El PIN no tiene longitud fija.** La app lo pide de 6 dígitos y el campo nunca ha validado
+ninguna longitud; la documentación decía «PIN de 4 dígitos», y eso llevó a dudar de la longitud
+cuando el problema era otro.
+
+**Sin confirmar: el PIN podría ser POR CUENTA y no del vehículo.** Observado el 01/10/2026 sobre
+el mismo coche — con la cuenta titular funcionaba un PIN y con una delegada otro distinto, después
+de cambiarlo desde la app con la titular. Encaja con «cada cuenta tiene el suyo», pero **nunca se
+hizo la prueba limpia** (cambiarlo desde la delegada y ver a cuál afecta), así que no se afirma en
+ninguna parte de cara al usuario. Queda apuntado porque, si es cierto, explica un desconcierto
+caro: se cambió el PIN en una cuenta, falló en la otra, y todo lo demás pareció encajar durante
+doce horas en una teoría equivocada. Si alguien lo comprueba, que lo escriba aquí.
+
+**`checkPassword code=1` con `message` `A07908`/`A07909` significa PIN incorrecto.** Medido. Se
+reclasificaron unas horas como «no es el PIN» razonando que la app aceptaba el PIN que a nosotros
+nos fallaba; la premisa era falsa (la app aceptaba el PIN NUEVO de otra cuenta) y el efecto era
+quitarle el freno al anti-bloqueo ante un PIN realmente erróneo. Esa clase de error no la paga el
+software: la paga la cuenta del usuario. Por eso los dos códigos están explícitos en
+`routing._OVERRIDE_CHECKPASSWORD` y en el test exhaustivo de `counts_for_lockout`.
+
 **El PIN y la sesión son cosas distintas.** El token de la cuenta mueve sensores y lecturas; si
-muere, toca reautenticar. El PIN de 4 cifras solo autoriza comandos remotos, y si es erróneo la
+muere, toca reautenticar. El PIN de comandos solo autoriza comandos remotos, y si es erróneo la
 sesión sigue viva. Reautenticar no cambia el PIN, así que proponerlo sería el remedio
 equivocado. El remedio se decide en `core/routing.py` sobre el código del backend, nunca sobre
 el texto del mensaje.

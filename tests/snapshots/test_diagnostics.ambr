@@ -25,6 +25,7 @@
         'tsp_host': 'https://tspconsole.example.invalid',
       }),
       'state': dict({
+        'account_id_matches': None,
         'awake': True,
         'car_connected': True,
         'car_subscribe_detail': None,
@@ -109,6 +110,9 @@
         }),
         'session_detail': 'sesión válida',
         'session_ok': True,
+        'vehicle_fields': None,
+        'vehicle_flags': None,
+        'vehicle_source': None,
         'wake_status': 'coche accesible',
       }),
       'token_present': False,

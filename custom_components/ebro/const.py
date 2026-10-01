@@ -34,6 +34,25 @@ DEFAULT_AREA_CODE = "34"     # España. Ej. Italia=39, Francia=33, Alemania=49.
 CONF_VEHICLE_NAME = "vehicle_name"
 DATA_VEHICLE_MODEL = "vehicle_model"
 DATA_VEHICLE_BRAND = "vehicle_brand"
+#: De qué lista de `queryList` salió este coche (`controlCarList` / `authorizedControlCarList` /
+#: …), con su `authorizeType` si lo trae. SOLO diagnóstico: nada del componente cambia según su
+#: valor. Ver `core.vehicles.source_list` para el porqué.
+DATA_VEHICLE_SOURCE = "vehicle_source"
+#: Los NOMBRES de los campos que el backend trae para este vehículo. Solo diagnóstico; ver
+#: `core.vehicles.entry_fields`.
+DATA_VEHICLE_FIELDS = "vehicle_fields"
+#: Valores de una lista blanca de banderas de la ficha (`passwordType`, `authorizeType`,
+#: `defCar`…). Solo diagnóstico; ver `core.vehicles.entry_flags`.
+DATA_VEHICLE_FLAGS = "vehicle_flags"
+#: Versión de lo que se recoge de la ficha del vehículo. Se SUBE al añadir o quitar algo de
+#: `core.vehicles._FLAG_KEYS` (o de lo que se persista en general): la caché compara este número
+#: y vuelve a consultar cuando no coincide.
+#:
+#: Existe porque la comprobación anterior miraba si la CLAVE estaba presente, no su contenido.
+#: Resultado: se ampliaba lo que se recogía, el usuario actualizaba, y seguía viendo los datos
+#: viejos — tres veces seguidas, con una ida y vuelta de depuración cada una.
+DATA_VEHICLE_PROBE_VERSION = "vehicle_probe_version"
+VEHICLE_PROBE_VERSION = 2
 # valor por defecto cuando el modelo aún no se conoce
 DEFAULT_VEHICLE_NAME = "Ebro Auto"
 # Marca del vehículo: constante, esta integración es solo para Ebro.

@@ -13,7 +13,9 @@ Nunca se llama a `async_refresh()`: el coordinator es push-only (`update_interva
 
 from __future__ import annotations
 
+import asyncio
 import json
+import threading
 import time
 from unittest.mock import AsyncMock, patch
 
@@ -30,6 +32,11 @@ from custom_components.ebro.const import (
 )
 from custom_components.ebro.vehicle import coordinator as coord_mod, telemetry
 from custom_components.ebro.vehicle.poll_policy import interval_seconds
+
+#: `conftest.mock_core` sustituye `_fetch_vehicle_identity` en TODAS las pruebas (devuelve None,
+#: para que el setup no salga a la red). Se guarda el original aquí, a la importación del módulo,
+#: que es antes de que ningún parche esté activo: es la única forma de probar el método de verdad.
+_FETCH_IDENTITY_REAL = coord_mod.EbroCoordinator._fetch_vehicle_identity
 
 # ⚠️ NO se congela el reloj a nivel de módulo, a diferencia de los tests de plataforma.
 # `_settle_after_command` (la pausa entre comandos de la cola) hace
@@ -496,6 +503,98 @@ async def test_el_monitor_apunta_el_tipo_de_cada_mensaje(
     assert "40.4" not in str(campos)
 
 
+async def test_el_monitor_apunta_el_resultado_de_cada_sonda(
+    hass: HomeAssistant, coordinator
+) -> None:
+    """Sin esto, «la ubicación no se actualiza» no se puede diagnosticar con el archivo de
+    diagnóstico en la mano: el sensor solo guarda el ÚLTIMO mensaje y el log en crudo de la
+    sonda depende de `EBRO_PROBE_LOG`, que en una instalación normal nadie tiene puesta."""
+    from unittest.mock import MagicMock
+
+    coordinator._diag_monitor._recorder = grabador = MagicMock()
+    resultado = {"ok": True, "got_data": True, "has_position": False,
+                 "location_code": "A07900", "duration_ms": 412,
+                 "rich": {"odometer": 1234}, "codes": ["000000", "A07900", "A07900"]}
+
+    with patch("custom_components.ebro.core.probe.probe_once", return_value=resultado):
+        coordinator._probe(force=True)
+
+    tipo, campos = grabador.record.call_args[0], grabador.record.call_args[1]
+    assert tipo[0] == "probe"
+    assert campos["forced"] is True
+    assert campos["location_code"] == "A07900"
+    assert campos["has_position"] is False
+    # `rich` no se duplica aquí: esos valores ya están en sus propios sensores.
+    assert "rich" not in campos
+
+
+# ───────────── identidad del vehículo (queryList) ─────────────
+
+
+async def test_la_identidad_apunta_de_que_lista_salio_el_coche(
+    hass: HomeAssistant, coordinator
+) -> None:
+    """Dato de diagnóstico: `authorizedControlCarList` sería una cuenta secundaria. Ver
+    `core.vehicles.source_list` para la sospecha que hay detrás."""
+    respuesta = {"data": {"authorizedControlCarList": [
+        {"vin": coordinator.vin, "nickname": "Prestado", "modelName": "S900",
+         "authorizeType": 0}]}}
+
+    with (
+        patch("custom_components.ebro.core.wake._bff_login", return_value=("UT", "TU")),
+        patch("custom_components.ebro.core.vehicles.query_list", return_value=respuesta),
+    ):
+        info = _FETCH_IDENTITY_REAL(coordinator)
+
+    assert info is not None
+    assert info["vehicle_source"] == {"list": "authorizedControlCarList", "authorize_type": 0}
+    assert info["vehicle_name"] == "Prestado"
+
+
+async def test_una_instalacion_ya_montada_vuelve_a_consultar_una_vez(
+    hass: HomeAssistant, coordinator
+) -> None:
+    """El punto delicado. `async_ensure_vehicle_identity` sale sin hacer nada si el nombre ya
+    está en caché, así que en una instalación que lleve meses funcionando el dato nuevo NO se
+    recogería nunca — y es justo esa la que puede tener el problema que se quiere diagnosticar.
+    Una consulta más, una sola vez, y a caché."""
+    hass.config_entries.async_update_entry(
+        coordinator.entry,
+        data={**coordinator.entry.data, "vehicle_name": "Mi Ebro"},   # sin `vehicle_source`
+    )
+
+    with patch.object(
+        coordinator, "_fetch_vehicle_identity", return_value=None
+    ) as consulta:
+        await coordinator.async_ensure_vehicle_identity()
+
+    consulta.assert_called_once()
+
+
+async def test_con_el_dato_ya_en_cache_no_se_vuelve_a_consultar(
+    hass: HomeAssistant, coordinator
+) -> None:
+    """La otra mitad: recogido una vez, no se consulta más. Si no, sería una petición extra en
+    cada arranque de Home Assistant, a una nube que admite una sola sesión por cuenta.
+
+    La caché se compara por VERSIÓN: subir `VEHICLE_PROBE_VERSION` al ampliar lo que se recoge
+    hace que todas las instalaciones vuelvan a consultar una vez. Comprobar la presencia de las
+    claves no bastaba — dejaba los datos viejos en su sitio, tres veces seguidas."""
+    hass.config_entries.async_update_entry(
+        coordinator.entry,
+        data={**coordinator.entry.data, "vehicle_name": "Mi Ebro",
+              "vehicle_source": {"list": "controlCarList"},
+              "vehicle_fields": ["nickname", "vin"],
+              "vehicle_flags": {"authorizeType": 0},
+              "vehicle_probe_version": coord_mod.VEHICLE_PROBE_VERSION},
+    )
+
+    with patch.object(coordinator, "_fetch_vehicle_identity") as consulta:
+        await coordinator.async_ensure_vehicle_identity()
+
+    consulta.assert_not_called()
+
+
 # ───────────── frescura del dato (car_data_ts) ─────────────
 
 
@@ -536,3 +635,76 @@ async def test_despues_del_primer_frame_manda_el_contenido(
     coordinator._on_probe_data({"time": str(t0 + 60_000), "dumpEnergy": "69"})
     await hass.async_block_till_done()
     assert coordinator.data["car_data_ts"] > primero           # cambió → avanza
+
+
+# ───────────── sondas simultáneas ─────────────
+# Cinco caminos piden sondear, y tres son señales del coche que llegan juntas —se despierta,
+# empieza a mandar seguido, detecta el cable—. Cada una abría su propia lectura sin mirar si ya
+# había otra en marcha: tres consultas casi simultáneas, doce peticiones a la nube, para traer
+# lo mismo. Medido en el registro de campo.
+
+
+def _sonda_lenta(registro: list, suelta: threading.Event):
+    """Un `_probe` que se queda en vuelo hasta que el test lo suelta."""
+
+    def _lenta(force: bool = False) -> None:
+        registro.append(force)
+        suelta.wait(5)
+
+    return _lenta
+
+
+async def _dejar_arrancar(hass: HomeAssistant) -> None:
+    """Deja que la tarea llegue hasta el executor antes de lanzar la siguiente."""
+    for _ in range(5):
+        await asyncio.sleep(0)
+
+
+async def test_dos_sondas_a_la_vez_comparten_una_sola_lectura(
+    hass: HomeAssistant, coordinator
+) -> None:
+    registro: list = []
+    suelta = threading.Event()
+
+    with patch.object(coordinator, "_probe", _sonda_lenta(registro, suelta)):
+        primera = hass.async_create_task(coordinator.async_probe(force=True))
+        await _dejar_arrancar(hass)
+        segunda = hass.async_create_task(coordinator.async_probe(force=True))
+        await _dejar_arrancar(hass)
+        suelta.set()
+        await asyncio.gather(primera, segunda)
+
+    assert registro == [True]      # una sola lectura, no dos
+
+
+async def test_una_sonda_forzada_no_se_conforma_con_una_sin_forzar(
+    hass: HomeAssistant, coordinator
+) -> None:
+    """Quien pide MÁS no puede sumarse a la que corre: una sin forzar puede estar saltándose el
+    trabajo por el cooldown y volver de vacío, y el que forzaba se quedaría sin su lectura."""
+    registro: list = []
+    suelta = threading.Event()
+
+    with patch.object(coordinator, "_probe", _sonda_lenta(registro, suelta)):
+        floja = hass.async_create_task(coordinator.async_probe())
+        await _dejar_arrancar(hass)
+        fuerte = hass.async_create_task(coordinator.async_probe(force=True))
+        await _dejar_arrancar(hass)
+        suelta.set()
+        await asyncio.gather(floja, fuerte)
+
+    assert registro == [False, True]
+
+
+async def test_sondas_consecutivas_siguen_siendo_dos_lecturas(
+    hass: HomeAssistant, coordinator
+) -> None:
+    """Sumarse solo vale mientras hay una EN VUELO. Una vez terminada, la siguiente petición es
+    una lectura nueva: esto junta lo simultáneo, no silencia el sondeo."""
+    registro: list = []
+
+    with patch.object(coordinator, "_probe", lambda force=False: registro.append(force)):
+        await coordinator.async_probe(force=True)
+        await coordinator.async_probe(force=True)
+
+    assert registro == [True, True]

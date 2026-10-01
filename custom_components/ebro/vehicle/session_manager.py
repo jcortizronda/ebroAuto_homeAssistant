@@ -4,7 +4,7 @@ Hay dos credenciales distintas y confundirlas es el error clásico de esta integ
 
 * la **sesión** (token de la cuenta) hace funcionar sensores y lecturas. Si muere, el remedio
   es reautenticarse;
-* el **PIN de comandos** (4 cifras) solo autoriza los comandos remotos. Si es erróneo, la
+* el **PIN de comandos** solo autoriza los comandos remotos. Si es erróneo, la
   sesión sigue perfectamente viva y los sensores funcionan — proponer reautenticar sería el
   remedio equivocado, porque reautenticar no cambia el PIN.
 
@@ -184,7 +184,7 @@ class SessionManager:
         """Crea un aviso de reparación (fixable) por el PIN de comandos erróneo.
 
         NO toca `session_ok`: la sesión es válida y los sensores funcionan; el problema es solo
-        el PIN de 4 cifras de los comandos remotos. El aviso abre la reconfiguración del PIN."""
+        el PIN de los comandos remotos. El aviso abre la reconfiguración del PIN."""
         from homeassistant.helpers import issue_registry as ir
 
         ir.async_create_issue(

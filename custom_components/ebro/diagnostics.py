@@ -20,7 +20,12 @@ from typing import Any
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.core import HomeAssistant
 
-from .const import CERT_FILES
+from .const import (
+    CERT_FILES,
+    DATA_VEHICLE_FIELDS,
+    DATA_VEHICLE_FLAGS,
+    DATA_VEHICLE_SOURCE,
+)
 from .helpers import fields
 from .models import EbroConfigEntry
 
@@ -160,6 +165,23 @@ async def async_get_config_entry_diagnostics(
             # denegar el topic, y entonces la telemetría no llega nunca.
             "car_subscribed": data.get("car_subscribed"),
             "car_subscribe_detail": data.get("car_subscribe_detail"),
+            # …y suscrito tampoco es lo mismo que RECIBIR: en campo apareció una cuenta que
+            # conectaba, se suscribía con éxito y no recibía ni un solo aviso del coche —
+            # mientras las consultas y los comandos funcionaban con normalidad. De qué lista de
+            # `queryList` salió el coche es la pista que puede explicarlo (ver
+            # `core.vehicles.source_list`); se repite aquí, aunque ya viaje dentro de
+            # `entry.data`, porque es junto a estas tres líneas donde se lee.
+            "vehicle_source": entry.data.get(DATA_VEHICLE_SOURCE),
+            # Los NOMBRES de los campos de la ficha del vehículo. Buscamos uno que apunte al
+            # canal correcto: la app recibe los avisos con la misma cuenta con la que nosotros
+            # no recibimos nada. Ver `core.vehicles.entry_fields`.
+            "vehicle_fields": entry.data.get(DATA_VEHICLE_FIELDS),
+            # Los VALORES de una lista blanca de banderas. `passwordType` es el que buscamos:
+            # ciframos el PIN siempre igual, y la app acepta un PIN que a nosotros nos rechaza.
+            "vehicle_flags": entry.data.get(DATA_VEHICLE_FLAGS),
+            # Solo si COINCIDEN, nunca los identificadores. Ver
+            # `coordinator.async_check_account_identity`.
+            "account_id_matches": data.get("account_id_matches"),
             # El topic LLEVA DENTRO el tUserId, que está en `TO_REDACT` — publicarlo entero
             # sería sacar por la puerta de atrás justo lo que se oculta por la principal.
             # Interesa la FORMA (comodín o topic exacto), no el número.

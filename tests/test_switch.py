@@ -17,10 +17,15 @@ from homeassistant.const import (
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, State
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry, snapshot_platform
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    mock_restore_cache,
+    snapshot_platform,
+)
 from syrupy.assertion import SnapshotAssertion
 
 from .conftest import get_coordinator
@@ -268,19 +273,136 @@ async def test_polling_no_manda_ningun_comando(hass: HomeAssistant) -> None:
     assert hass.states.get(POLLING).state == STATE_ON
 
 
+async def _enciende(hass: HomeAssistant, entity_id: str) -> None:
+    await hass.services.async_call(
+        SWITCH_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: entity_id}, blocking=True
+    )
+
+
 @pytest.mark.usefixtures("init_integration")
 async def test_limite_de_carga_es_solo_un_atributo(hass: HomeAssistant) -> None:
     """Límite por SOFTWARE: el switch solo levanta la bandera que vigila el coordinator."""
     coordinator = _coordinator(hass)
     assert coordinator.charge_limit_enabled is False
+    await _enciende(hass, POLLING)   # requisito: sin sondeo el límite no se comprueba nunca
 
     with patch.object(
         coordinator, "async_send_command", AsyncMock(return_value="ok")
     ) as send:
-        await hass.services.async_call(
-            SWITCH_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: LIMITE}, blocking=True
-        )
+        await _enciende(hass, LIMITE)
 
     send.assert_not_awaited()
     assert coordinator.charge_limit_enabled is True
     assert hass.states.get(LIMITE).state == STATE_ON
+
+
+async def test_al_reiniciar_el_limite_no_revive_si_el_sondeo_quedo_apagado(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_core,
+) -> None:
+    """Las dos entidades restauran su estado por su cuenta y HA no garantiza en qué orden. Si el
+    límite restaurase después del sondeo sin mirarlo, un reinicio devolvería justo la
+    combinación prohibida: límite encendido, sondeo apagado, nadie comprobando la batería."""
+    mock_restore_cache(hass, (State(POLLING, STATE_OFF), State(LIMITE, STATE_ON)))
+    mock_config_entry.add_to_hass(hass)
+
+    with patch("custom_components.ebro.PLATFORMS", [Platform.SWITCH]):
+        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+    coordinator = mock_config_entry.runtime_data
+    assert coordinator.poll_enabled is False
+    assert coordinator.charge_limit_enabled is False
+    assert hass.states.get(LIMITE).state == STATE_OFF
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_el_limite_de_carga_no_se_deja_encender_sin_sondeo(hass: HomeAssistant) -> None:
+    """`check_charge_limit` se llama desde UN solo sitio: `polling.schedule_next()`, después
+    del `return` que mira este interruptor. Sin sondeo el límite no se comprueba nunca, así que
+    dejarlo encender sería un interruptor que no hace nada — y el usuario cuenta con él para
+    que su coche no cargue al 100 %."""
+    coordinator = _coordinator(hass)
+    assert coordinator.poll_enabled is False
+
+    with pytest.raises(ServiceValidationError, match="Actualización automática"):
+        await _enciende(hass, LIMITE)
+
+    assert coordinator.charge_limit_enabled is False
+    assert hass.states.get(LIMITE).state == STATE_OFF
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_el_limite_de_carga_no_se_deja_encender_sin_intervalo_de_carga(
+    hass: HomeAssistant,
+) -> None:
+    """El otro camino al mismo agujero. Con «Actualización automática» encendida pero el
+    intervalo de «Cargando» a 0, el bucle se detiene precisamente MIENTRAS carga —que es el único
+    momento en que el límite tendría algo que hacer— y el coche llegaría al 100 % con el
+    interruptor encendido."""
+    coordinator = _coordinator(hass)
+    await _enciende(hass, POLLING)
+    coordinator.poll_charging_min = 0
+
+    with pytest.raises(ServiceValidationError, match="Cargando"):
+        await _enciende(hass, LIMITE)
+
+    assert coordinator.charge_limit_enabled is False
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_el_motivo_del_rechazo_distingue_los_dos_casos(hass: HomeAssistant) -> None:
+    """Dos causas distintas piden dos arreglos distintos: una se resuelve con un interruptor y la
+    otra en las opciones de la integración. Un único mensaje genérico mandaría a medio mundo a
+    mirar donde no es."""
+    coordinator = _coordinator(hass)
+    assert coordinator.charge_limit_blocker == "charge_limit_needs_polling"
+
+    await _enciende(hass, POLLING)
+    assert coordinator.charge_limit_blocker is None
+
+    coordinator.poll_charging_min = 0
+    assert coordinator.charge_limit_blocker == "charge_limit_needs_charging_interval"
+
+
+async def test_al_reiniciar_el_limite_no_revive_si_el_intervalo_de_carga_es_cero(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_core,
+) -> None:
+    """Cambiar los intervalos en las opciones RECARGA la entrada, así que la restauración es el
+    punto por el que pasa un «Cargando» recién puesto a 0: si no mirase la regla, el límite
+    volvería encendido y sin nada que lo comprobase."""
+    mock_restore_cache(hass, (State(POLLING, STATE_ON), State(LIMITE, STATE_ON)))
+    mock_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        mock_config_entry, options={**(mock_config_entry.options or {}), "poll_charging_min": 0}
+    )
+
+    with patch("custom_components.ebro.PLATFORMS", [Platform.SWITCH]):
+        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+    coordinator = mock_config_entry.runtime_data
+    assert coordinator.poll_enabled is True
+    assert coordinator.charge_limit_enabled is False
+    assert hass.states.get(LIMITE).state == STATE_OFF
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_apagar_el_sondeo_apaga_el_limite_de_carga(hass: HomeAssistant) -> None:
+    """La otra mitad del acoplamiento: si se pudiera dejar el límite encendido al apagar el
+    sondeo, volveríamos exactamente a la situación que el rechazo de arriba evita."""
+    coordinator = _coordinator(hass)
+    await _enciende(hass, POLLING)
+    await _enciende(hass, LIMITE)
+    assert coordinator.charge_limit_enabled is True
+
+    await hass.services.async_call(
+        SWITCH_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: POLLING}, blocking=True
+    )
+    await hass.async_block_till_done()
+
+    assert coordinator.charge_limit_enabled is False
+    assert hass.states.get(LIMITE).state == STATE_OFF

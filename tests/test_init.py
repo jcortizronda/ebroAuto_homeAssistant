@@ -36,7 +36,7 @@ async def test_todas_las_entidades(
     entidades = er.async_entries_for_config_entry(
         entity_registry, mock_config_entry.entry_id
     )
-    assert len(entidades) == 94
+    assert len(entidades) == 96
 
 
 @pytest.mark.usefixtures("init_integration")

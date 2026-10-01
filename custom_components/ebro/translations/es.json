@@ -8,13 +8,21 @@
           "phone": "Teléfono de la cuenta",
           "password": "Contraseña",
           "pin": "PIN del vehículo (comandos)",
-          "area_code": "Prefijo de país (ej. 34)",
-          "bff": "Servidor BFF (avanzado)",
-          "tsp_host": "Servidor TSP (avanzado)",
-          "car_mqtt_host": "Broker MQTT (avanzado)",
-          "car_mqtt_port": "Puerto MQTT (avanzado)",
-          "channel_id": "Channel ID (avanzado)",
-          "certs_src": "Carpeta de certificados mutual-TLS (opcional)"
+          "area_code": "Prefijo de país (ej. 34)"
+        },
+        "sections": {
+          "avanzado": {
+            "name": "Avanzado",
+            "description": "Servidores y canal de Ebro. Vienen ya rellenos con los valores correctos para Europa: no hace falta tocarlos salvo que uses otra región o te lo pidan para diagnosticar un problema.",
+            "data": {
+              "bff": "Servidor BFF",
+              "tsp_host": "Servidor TSP",
+              "car_mqtt_host": "Broker MQTT",
+              "car_mqtt_port": "Puerto MQTT",
+              "channel_id": "ID de canal",
+              "certs_src": "Carpeta de certificados mutual-TLS (opcional)"
+            }
+          }
         }
       },
       "select_vehicle": {
@@ -38,7 +46,7 @@
       },
       "reconfigure": {
         "title": "Cambiar el PIN de control del vehículo",
-        "description": "Introduce el PIN de 4 dígitos usado para los comandos remotos. El PIN no se usa para iniciar sesión. Corrígelo si los comandos dicen que van bien pero el coche no hace nada (PIN incorrecto).",
+        "description": "Introduce el PIN de comandos remotos (el mismo de la app). El PIN no se usa para iniciar sesión. Corrígelo si los comandos dicen que van bien pero el coche no hace nada (PIN incorrecto).",
         "data": {
           "pin": "PIN de control del vehículo"
         }
@@ -73,7 +81,7 @@
         "step": {
           "pin": {
             "title": "Corregir el PIN de control del vehículo",
-            "description": "Los comandos remotos se rechazan porque el PIN de 4 dígitos es incorrecto (los sensores siguen funcionando — no es un problema de inicio de sesión). Introduce el PIN correcto. No sigas reintentando con un PIN erróneo, para no bloquear la cuenta.",
+            "description": "Los comandos remotos se rechazan porque el PIN de comandos es incorrecto (los sensores siguen funcionando — no es un problema de inicio de sesión). Introduce el PIN correcto. No sigas reintentando con un PIN erróneo, para no bloquear la cuenta.",
             "data": {
               "pin": "PIN de control del vehículo"
             }
@@ -86,6 +94,10 @@
           "entry_not_found": "Integración no encontrada — recarga Home Assistant e inténtalo de nuevo."
         }
       }
+    },
+    "delegated_account": {
+      "title": "Cuenta secundaria: los estados no se actualizan solos",
+      "description": "Esta integración está usando una **cuenta secundaria**.\n\nCon esas cuentas el coche **no envía avisos por su cuenta**: ni puertas, ni cierre, ni maletero. Es una limitación del servidor de Ebro, no de la integración — la app oficial tampoco los recibe con una cuenta secundaria; lo que hace para parecer instantánea es preguntar cada pocos segundos.\n\n**Funciona con normalidad:** consultar el estado, la batería, la autonomía, la posición y los comandos (abrir, cerrar, climatización).\n\n**Para que los estados se actualicen solos**, en las opciones de la integración pon un número distinto de 0 en «Sondeo con el coche parado». Cuanto más bajo, antes se refleja un cambio, y más peticiones se hacen a la nube de Ebro.\n\n**Con la cuenta del titular** no hace falta nada de esto: los avisos llegan solos."
     }
   },
   "options": {
@@ -207,6 +219,9 @@
       },
       "encontrar_coche_luces": {
         "name": "Encontrar coche (luces)"
+      },
+      "parar_carga": {
+        "name": "Parar carga"
       }
     },
     "climate": {
@@ -258,6 +273,9 @@
       },
       "combustible_restante": {
         "name": "Combustible restante"
+      },
+      "cuentakilometros_ev": {
+        "name": "Cuentakilómetros EV"
       },
       "kilometraje_hibrido": {
         "name": "Kilometraje híbrido"
@@ -406,6 +424,49 @@
       },
       "duracion_de_la_carga": {
         "name": "Duración de la carga"
+      }
+    }
+  },
+  "exceptions": {
+    "command_failed": {
+      "message": "El comando «{name}» ha fallado: {error}"
+    },
+    "action_failed": {
+      "message": "«{name}» no se ha podido completar: {error}"
+    },
+    "car_busy": {
+      "message": "El coche sigue ocupado con los comandos anteriores. Reinténtalo en unos instantes."
+    },
+    "charge_limit_needs_polling": {
+      "message": "El límite de carga necesita «Actualización automática» encendida: es el sondeo el que lee la batería y decide cuándo cortar. Enciéndela primero."
+    },
+    "charge_limit_needs_charging_interval": {
+      "message": "El límite de carga necesita que el intervalo de «Cargando» sea mayor que 0 en las opciones de la integración: con 0 no se consulta nada mientras el coche carga, que es justo cuando habría que vigilar la batería."
+    },
+    "charge_duration_too_short": {
+      "message": "La duración mínima de carga que acepta el coche es de {minimo} minutos; se pidieron {pedido}."
+    },
+    "no_vehicle_target": {
+      "message": "El destino no corresponde a ningún vehículo Ebro cargado."
+    }
+  },
+  "services": {
+    "programar_carga": {
+      "name": "Programar carga",
+      "description": "Fija la hora de inicio y la duración de la carga programada y las envía al coche en una sola llamada. Equivale a poner las dos entidades de hora y pulsar «Aplicar carga programada», pero sin depender del orden — pensado para automatizaciones.",
+      "fields": {
+        "hora_inicio": {
+          "name": "Hora de inicio",
+          "description": "A qué hora empieza a cargar el coche (hora local)."
+        },
+        "duracion": {
+          "name": "Duración",
+          "description": "Cuántos minutos dura la ventana de carga. El coche RECHAZA menos de 60 minutos, así que valores menores dan error en vez de corregirse solos."
+        },
+        "activar": {
+          "name": "Activar",
+          "description": "Deja la carga programada encendida al enviarla. Desactívalo para guardar el horario en el coche sin que cargue."
+        }
       }
     }
   }

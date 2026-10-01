@@ -149,6 +149,12 @@ _RT_SENSORS: list[_RtSpec] = [
             icon="mdi:counter"),
     _RtSpec("km_hibrido", "Kilometraje híbrido", "hybridMileage", device_class=DIST, unit=KM, state_class=TOTAL,
             icon="mdi:counter", diag=True),
+    # `electricRange` es un ODÓMETRO, no una autonomía: los km recorridos en modo 100 % eléctrico.
+    # El nombre engaña y por eso estuvo sin exponer. Medido en una captura del coche con el
+    # cuentakilómetros en 8712: `electricRange` valía 5702 — un acumulado, no un restante.
+    # NO confundir con `pureElectricRange` (autonomía eléctrica que QUEDA) ni con `cruiseRange`.
+    _RtSpec("km_electrico", "Cuentakilómetros EV", "electricRange", device_class=DIST, unit=KM,
+            state_class=TOTAL, icon="mdi:counter"),
     # ── P1 · TPMS presión (campo del coche en kPa → mostrada en BAR como en la app: ÷100) ──
     _RtSpec("neumatico_del_izq_presion", "Presión neumático del. izquierdo", "lFrontTyreKpa", device_class=PRESS,
             unit=BAR, state_class=MEAS, icon="mdi:car-tire-alert", scale=0.01, precision=2),
@@ -234,7 +240,11 @@ async def async_setup_entry(
     ents.append(EbroTextSensor(coord, "Ebro Resultado sonda de ubicación", "probe_status", "probe_status", "mdi:crosshairs-gps"))
     ents.append(EbroTimestampSensor(coord, "Ebro Último contacto", "lastseen", "last_seen", "mdi:car-clock"))
     ents.append(EbroTimestampSensor(coord, "Ebro Último despertar", "wake_ts", "last_wake", "mdi:car-clock"))
-    ents.append(EbroTimestampSensor(coord, "Ebro Última ubicación", "pos_fix", "last_pos_fix", "mdi:map-marker-clock"))
+    # `mdi:map-marker-clock` NO existe en Material Design Icons. Home Assistant guardaba el
+    # nombre tal cual y el frontend, que no lo encuentra, dibujaba un hueco: el sensor salía
+    # sin icono mientras sus tres hermanos (car-clock, database-clock) sí lo tenían. `map-clock`
+    # sí existe y es el mismo significado.
+    ents.append(EbroTimestampSensor(coord, "Ebro Última ubicación", "pos_fix", "last_pos_fix", "mdi:map-clock"))
     # [2.0] frescura del frame del coche (resultTime del realtime): cómo de viejo es el dato de
     #       batería/odómetro mostrado — útil con el coche parado para saber si es reciente o rancio.
     ents.append(EbroTimestampSensor(coord, "Ebro Datos del coche actualizados", "car_data_ts", "car_data_ts", "mdi:database-clock"))

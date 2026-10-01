@@ -24,6 +24,16 @@ _LOGGER = logging.getLogger(__name__)
 # Efecto secundario útil: los loggers de los módulos core/ ahora responden a `manifest.loggers`.
 
 
+async def async_setup(hass: HomeAssistant, config) -> bool:
+    """Registra los servicios del dominio. Va aquí y no en `async_setup_entry` porque los
+    servicios son del COMPONENTE: registrarlos por entrada los daría de alta dos veces con dos
+    coches, y la segunda pisaría a la primera."""
+    from .services import async_setup_services
+
+    async_setup_services(hass)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: EbroConfigEntry) -> bool:
     """Inicializa la integración a partir de un config entry."""
     from .vehicle.coordinator import EbroCoordinator
@@ -65,6 +75,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: EbroConfigEntry) -> bool
         # recarga ocurra con el setup ya terminado.
         hass.async_create_background_task(
             coordinator.async_ensure_vehicle_identity(), "ebro_vehicle_identity")
+        # Marca el coche como predeterminado de la cuenta (sin PIN). Es lo que hace la app al
+        # entrar, y la hipótesis es que de ello depende que la nube publique los avisos del
+        # coche en el canal de esta cuenta. Ver `coordinator.async_claim_default_vehicle`.
+        hass.async_create_background_task(
+            coordinator.async_claim_default_vehicle(), "ebro_default_vehicle")
+        # ¿Es nuestro identificador de cuenta el de la sesión viva? Ver el docstring: es el
+        # único elemento que comparten el canal MQTT y la verificación del PIN.
+        hass.async_create_background_task(
+            coordinator.async_check_account_identity(), "ebro_account_identity")
+        # Aviso si la cuenta es delegada: con ellas el coche no empuja nada por MQTT y los
+        # estados no se mueven solos. Ver `async_review_delegated_account`.
+        coordinator.async_review_delegated_account()
+        # Permisos de la cuenta sobre el coche: dos endpoints que la app tiene y nosotros no
+        # llamábamos. Solo con el monitor de diagnóstico encendido.
+        hass.async_create_background_task(
+            coordinator.async_probe_authority(), "ebro_authority")
     except Exception:
         await hass.async_add_executor_job(coordinator.async_stop)
         raise

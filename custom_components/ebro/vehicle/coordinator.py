@@ -29,7 +29,11 @@ from ..const import (
     CONF_POLL_PLUGGED,
     CONF_VEHICLE_NAME,
     DATA_VEHICLE_BRAND,
+    DATA_VEHICLE_FIELDS,
+    DATA_VEHICLE_FLAGS,
     DATA_VEHICLE_MODEL,
+    DATA_VEHICLE_PROBE_VERSION,
+    DATA_VEHICLE_SOURCE,
     DEFAULT_AWAKE_WINDOW,
     DEFAULT_PLUGGED_WAIT_MAX_MIN,
     DEFAULT_POLL_CHARGING_MIN,
@@ -41,6 +45,7 @@ from ..const import (
     HV_WAIT_ATTEMPTS,
     POLL_WAKE_WAIT,
     VEHICLE_BRAND,
+    VEHICLE_PROBE_VERSION,
 )
 from ..helpers import field_on, realtime, to_float, truncate_status
 from ..models import ChargePreferences, EbroConfigEntry
@@ -166,6 +171,10 @@ class EbroCoordinator(DataUpdateCoordinator):
         # Huella de la última telemetría vista, para notar cuándo cambia de verdad.
         # `None` = ninguna lectura hecha aún en esta sesión.
         self._data_fingerprint: str | None = None
+        #: sonda en vuelo, para que varias peticiones simultáneas compartan una sola lectura.
+        #: Ver `async_probe`.
+        self._probe_task: asyncio.Task | None = None
+        self._probe_task_forced = False
         # Monitor de diagnóstico para el DESARROLLADOR (ver diag_monitor.py). Dormido salvo
         # que exista la bandera: mientras lo esté, cada punto de enganche es un solo
         # `is not None` — vale sobre todo para `_on_car_message`, que corre en cada push.
@@ -195,6 +204,29 @@ class EbroCoordinator(DataUpdateCoordinator):
     # ───────────────── límite de carga por software ─────────────────
     # `switch.EbroChargeLimitSwitch` y `number.EbroConfigNumber` escriben estos dos nombres;
     # delegan en el `ChargeLimiter`, que es quien decide y quien recuerda si ya se cortó.
+    #: Motivos por los que el límite de carga NO puede funcionar, con su clave de traducción.
+    #: Están aquí y no repartidos por `switch.py` porque la regla se consulta desde dos sitios —al
+    #: encender el interruptor y al restaurarlo tras un reinicio— y tenerla escrita dos veces es
+    #: exactamente cómo se cuela una incoherencia.
+    @property
+    def charge_limit_blocker(self) -> str | None:
+        """Por qué el límite de carga no puede vigilar nada ahora, o `None` si puede.
+
+        `check_charge_limit()` se llama desde un ÚNICO punto: justo después de cada lectura del
+        canal realtime, dentro de `polling.schedule_next()`. De ahí las dos condiciones, que son
+        dos formas de que esa lectura no llegue a ocurrir:
+
+        * sin «Actualización automática» el bucle está parado entero;
+        * con el intervalo de «Cargando» a 0 el bucle se detiene precisamente MIENTRAS carga,
+          que es el único momento en que el límite tendría algo que hacer. El interruptor se
+          quedaría encendido sin comprobar nada y el coche cargaría al 100 %.
+        """
+        if not self.poll_enabled:
+            return "charge_limit_needs_polling"
+        if not self.poll_charging_min:
+            return "charge_limit_needs_charging_interval"
+        return None
+
     @property
     def charge_limit_enabled(self) -> bool:
         return self._charge_limiter.enabled
@@ -314,8 +346,19 @@ class EbroCoordinator(DataUpdateCoordinator):
     def set_poll_enabled(self, on: bool) -> None:
         """Activa/desactiva el sondeo en runtime (interruptor «Actualización automática»).
 
-        Lo llama `switch.EbroPollingSwitch`; la firma se conserva por eso."""
+        Lo llama `switch.EbroPollingSwitch`; la firma se conserva por eso.
+
+        **Apagarlo apaga también el límite de carga.** `check_charge_limit` se llama desde un
+        único sitio —`polling.schedule_next()`, después del `return` que mira este interruptor—
+        así que sin sondeo el límite no se comprueba NUNCA: lo dejas puesto al 80 %, apagas la
+        actualización automática, y el coche carga hasta el 100 % sin un aviso. Un interruptor
+        encendido que no hace nada es peor que uno apagado, porque el usuario cuenta con él."""
         self.polling.set_enabled(on)
+        if not on and self._charge_limiter.enabled:
+            self._charge_limiter.enabled = False
+            _LOGGER.info("[carga] límite de carga apagado: sin actualización automática no hay "
+                         "lecturas de batería con las que decidir cuándo cortar")
+            self.async_update_listeners()
 
     @property
     def poll_enabled(self) -> bool:
@@ -324,7 +367,38 @@ class EbroCoordinator(DataUpdateCoordinator):
     async def async_probe(self, force: bool = False) -> None:
         """Una lectura del canal realtime, y la reprogramación del bucle.
 
-        La usan el botón «Actualizar ubicación», el flanco de despertar y el propio bucle."""
+        La usan el botón «Actualizar ubicación», el flanco de despertar y el propio bucle.
+
+        **Varias peticiones a la vez comparten una sola lectura.** Hay cinco caminos que piden
+        sondear —el arranque, el temporizador, el flanco de despertar, la ráfaga de marcha y el
+        cable— y tres de ellos son señales del coche que a menudo llegan juntas: se despierta,
+        empieza a mandar seguido y detecta el cable en el mismo par de segundos. Cada una abría
+        su propia lectura sin mirar si ya había otra en marcha, y salían tres consultas casi
+        simultáneas —doce peticiones a la nube— para traer exactamente lo mismo.
+
+        No producía datos erróneos, pero la nube de Chery concede una sola sesión por cuenta y
+        el proyecto entero está construido sobre no hablar de más. Es el mismo problema del
+        pulsador que rebota: ninguna de las tres señales es falsa, simplemente sobran dos
+        lecturas.
+
+        Quien llega y encuentra una en vuelo se SUMA a ella en vez de abrir otra — salvo que
+        pida más de lo que la que corre está dando: una petición forzada no puede conformarse
+        con una sin forzar, porque esa puede estar saltándose el trabajo por el cooldown y
+        volver de vacío."""
+        en_vuelo = self._probe_task
+        if en_vuelo is not None and not en_vuelo.done() and (self._probe_task_forced or not force):
+            await asyncio.shield(en_vuelo)
+            return
+
+        self._probe_task_forced = force
+        self._probe_task = self.hass.async_create_task(self._probe_and_reschedule(force))
+        try:
+            await self._probe_task
+        finally:
+            self._probe_task = None
+
+    async def _probe_and_reschedule(self, force: bool) -> None:
+        """La lectura de verdad. Separada de `async_probe` para poder compartirla como tarea."""
         await self.hass.async_add_executor_job(self._probe, force)
         # Si mientras la lectura estaba en vuelo llegó el stop, NO rearmar: ese es exactamente
         # el sondeo huérfano que siguió interrogando a la nube con la integración apagada.
@@ -336,13 +410,6 @@ class EbroCoordinator(DataUpdateCoordinator):
         # controla con el interruptor y con los intervalos.
         await self.async_refresh_charge_schedule()
         self.polling.schedule_next()
-
-    def _probe(self, force: bool = False) -> None:
-        from ..core import probe as PROBE
-
-        emit = self._status_emitter("probe_status", "probe")
-        # force=True (bucle periódico): ignora el cooldown de la sonda.
-        PROBE.probe_once(self.ctx, emit, force=force, on_data=self._on_probe_data)
 
     def _connect_car(self) -> None:
         """Conecta el cliente MQTT del coche. Bloqueante → corre en executor."""
@@ -484,6 +551,13 @@ class EbroCoordinator(DataUpdateCoordinator):
 
         # [H3] flanco de despertar → una sonda realtime (solo lectura). La programación de la
         # tarea DEBE hacerse en el loop: desde el hilo paho usa call_soon_threadsafe.
+        #
+        # NO mira `poll_enabled`, al contrario que el disparador de abajo, y es deliberado: es
+        # UNA lectura a la nube en el único instante en que hay datos frescos, no despierta el
+        # coche y no gasta 12 V. Y no compite con la app oficial — el límite de una sesión por
+        # cuenta se aplica al iniciar sesión, no por petición. Lo que el interruptor apaga es el
+        # BUCLE (`polling.schedule_next` sí lo comprueba), que es el gasto que el usuario quiere
+        # poder cortar. Ver el docstring de `switch.EbroPollingSwitch`.
         if not was_awake:
             self.hass.loop.call_soon_threadsafe(
                 lambda: self.hass.async_create_task(self.async_probe())
@@ -582,7 +656,9 @@ class EbroCoordinator(DataUpdateCoordinator):
             await asyncio.wait_for(self._cmd_gate.acquire(), timeout=COMMAND_QUEUE_WAIT)
         except TimeoutError as err:
             raise HomeAssistantError(
-                "El coche sigue ocupado con los comandos anteriores — reinténtalo en unos instantes."
+                "El coche sigue ocupado con los comandos anteriores — reinténtalo en unos instantes.",
+                translation_domain=DOMAIN,
+                translation_key="car_busy",
             ) from err
         t0 = time.monotonic()
         try:
@@ -704,11 +780,18 @@ class EbroCoordinator(DataUpdateCoordinator):
         await self.async_send_command(
             "carga_prog_on", {"mainSwitch": 1, "chargeAppointPlans": [plan]})
 
+    async def async_apply_charge_schedule(self, enabled: bool = True) -> None:
+        """Manda el plan con la hora/duración actuales. `enabled` = el plan queda activo o no.
+
+        Lo usa el servicio `ebro.programar_carga`; el botón «Aplicar» es el caso `enabled=True`.
+        """
+        await self._send_charge_plan(self.build_charge_plan(1 if enabled else 0))
+
     async def async_apply_scheduled_charge(self) -> None:
         """Botón "Aplicar carga programada": reenvía el plan al coche con la hora/duración actuales
         (mainSwitch=1), sin tener que apagar y volver a encender el interruptor. Útil tras cambiar
         la hora de inicio o la duración."""
-        await self._send_charge_plan(self.build_charge_plan(1))
+        await self.async_apply_charge_schedule(True)
 
     def current_soc(self) -> float | None:
         """% de batería actual (dumpEnergy del canal realtime), o None si no es válido. Con la alta
@@ -730,12 +813,30 @@ class EbroCoordinator(DataUpdateCoordinator):
             self.hass.async_create_task(self.async_stop_charge_via_schedule())
 
     def _probe(self, force: bool = False) -> None:
+        """La lectura de solo lectura del canal realtime. Corre en el executor.
+
+        NB: este método estaba DUPLICADO en esta misma clase (dos `def _probe` idénticos, uno
+        arriba y otro aquí). El de arriba no se ejecutaba nunca —Python se queda con la última
+        definición— así que tocarlo no tenía ningún efecto y el fichero no daba ni un aviso.
+        Es el mismo tropiezo que el `add(ents)` repetido de `sensor.py`."""
         from ..core import probe as PROBE
 
         emit = self._status_emitter("probe_status", "probe")
 
         # force=True (poll periódico): ignora el cooldown de la sonda.
-        PROBE.probe_once(self.ctx, emit, force=force, on_data=self._on_probe_data)
+        resultado = PROBE.probe_once(self.ctx, emit, force=force, on_data=self._on_probe_data)
+
+        # [diag] el RESULTADO de cada consulta, que hasta ahora no quedaba en ninguna parte: el
+        # sensor solo guarda el ÚLTIMO mensaje y el log en crudo de la sonda depende de la
+        # variable de entorno `EBRO_PROBE_LOG`, que en una instalación normal de Home Assistant
+        # nadie tiene puesta. Sin esto, «la ubicación no se actualiza» no se puede diagnosticar
+        # con el archivo de diagnóstico en la mano.
+        #
+        # Solo el desglose: `rich` (odómetro, batería, autonomía) ya viaja a sus propios
+        # sensores, y las coordenadas NO entran aquí a propósito — `has_position` es un booleano.
+        if self._diag is not None and isinstance(resultado, dict):
+            self._diag.record("probe", forced=force, **{
+                k: v for k, v in resultado.items() if k not in ("rich", "codes")})
 
     def _on_probe_data(self, data: dict) -> None:
         """Datos realtime (GPS/batería/velocidad/online) de la sonda → estado de posición.
@@ -828,35 +929,196 @@ class EbroCoordinator(DataUpdateCoordinator):
         los reinicios siguientes ya está en caché (sin nuevas llamadas). Solo lectura, no bloquea
         el setup: en caso de error queda el fallback "Ebro Auto"."""
         if str((self.entry.options or {}).get(CONF_VEHICLE_NAME) or "").strip():
+            _LOGGER.debug("[vehiculo] identidad: hay nombre manual en opciones, no se consulta")
             return  # override manual: no sobrescribir
-        if self.entry.data.get(CONF_VEHICLE_NAME):
+        # Se compara una VERSIÓN, no la presencia de las claves. Mirar si la clave existe deja
+        # la caché vieja intacta cuando se amplía lo que se recoge: pasó tres veces seguidas —se
+        # añadía un campo, el usuario actualizaba, y seguía viendo los datos anteriores—. Con la
+        # versión basta subir el número para que todas las instalaciones vuelvan a consultar una
+        # vez. Sigue siendo una sola consulta, y luego a caché como el resto.
+        if (self.entry.data.get(CONF_VEHICLE_NAME)
+                and self.entry.data.get(DATA_VEHICLE_PROBE_VERSION) == VEHICLE_PROBE_VERSION):
+            _LOGGER.debug("[vehiculo] identidad ya en caché, no se consulta")
             return  # ya en caché
         info = await self.hass.async_add_executor_job(self._fetch_vehicle_identity)
         if not info or not info.get(CONF_VEHICLE_NAME):
+            # Este `return` era MUDO, y por eso no se podía diagnosticar: en una instalación real
+            # el nombre y el modelo salían vacíos y la recarga no dejaba ni una línea en el log —
+            # ni de éxito ni de error. Con el log de abajo (`_fetch_vehicle_identity`) al menos se
+            # sabe QUÉ contestó la nube.
+            _LOGGER.debug("[vehiculo] identidad no resuelta; el dispositivo conserva su nombre")
             return
+        _LOGGER.debug("[vehiculo] identidad resuelta: modelo=%s origen=%s campos=%s",
+                      info.get(DATA_VEHICLE_MODEL), info.get(DATA_VEHICLE_SOURCE),
+                      info.get(DATA_VEHICLE_FIELDS))
         self.vehicle_name = info.get(CONF_VEHICLE_NAME)
         self.vehicle_model = info.get(DATA_VEHICLE_MODEL)
         self.vehicle_brand = info.get(DATA_VEHICLE_BRAND)
         self.hass.config_entries.async_update_entry(
             self.entry, data={**self.entry.data, **info})  # → un reload (luego está en caché)
 
+    async def async_claim_default_vehicle(self) -> None:
+        """Marca el coche como predeterminado de la cuenta. Best-effort, sin PIN.
+
+        Candidato a ARREGLO, no solo a prueba: ver `core.vehicles.set_default`. Si la nube solo
+        publica los avisos del vehículo predeterminado, esto es lo que falta para que una cuenta
+        que nunca ha mandado un comando con PIN reciba telemetría.
+
+        Va en segundo plano y nunca propaga: si falla, lo único que se pierde es la hipótesis."""
+        try:
+            respuesta = await self.hass.async_add_executor_job(self._claim_default_vehicle)
+        except Exception as err:   # best-effort: un fallo aquí no debe tumbar el setup
+            _LOGGER.debug("[vehiculo] no se pudo fijar como predeterminado: %s", err)
+            return
+        code = respuesta.get("code") if isinstance(respuesta, dict) else None
+        _LOGGER.debug("[vehiculo] fijado como predeterminado de la cuenta · code=%s", code)
+        if self._diag is not None:
+            self._diag.record("set_default", code=str(code) if code is not None else None)
+
+    async def async_check_account_identity(self) -> None:
+        """¿El identificador de cuenta que usamos es el que devuelve la sesión viva?
+
+        Con una cuenta secundaria fallan DOS cosas a la vez: el canal MQTT se concede pero no
+        recibe nada, y `checkPassword` rechaza un PIN que la app acepta. Dos subsistemas
+        distintos, un solo elemento en común — el `tuserid`, que construye el topic y viaja en
+        la verificación del PIN. Si el guardado no coincide con el de la sesión, ambos síntomas
+        salen de la misma causa.
+
+        Se registra solo si COINCIDEN, nunca los valores: el `tuserid` identifica la cuenta y va
+        en la lista de ocultación del informe."""
+        try:
+            coincide = await self.hass.async_add_executor_job(self._account_identity_matches)
+        except Exception as err:   # best-effort: un fallo aquí no debe tumbar el setup
+            _LOGGER.debug("[cuenta] no se pudo comprobar la identidad: %s", err)
+            return
+        if coincide is None:
+            return
+        self._update({"account_id_matches": coincide})
+        if not coincide:
+            _LOGGER.warning(
+                "[cuenta] el identificador de cuenta guardado NO coincide con el de la sesión "
+                "activa. Es el que construye el canal MQTT y el que se manda al verificar el "
+                "PIN, así que explicaría tanto la falta de avisos como el rechazo del PIN.")
+
+    def _account_identity_matches(self) -> bool | None:
+        from ..core import wake
+
+        _token, vivo = wake._bff_login(self.ctx)
+        if not vivo:
+            return None
+        return str(vivo).strip() == str(self.tuserid).strip()
+
+    async def async_probe_authority(self) -> None:
+        """Consulta los endpoints de permisos y lo apunta en el monitor. Solo diagnóstico."""
+        if self._diag is None:
+            return   # solo con el monitor encendido: son dos peticiones de más
+        try:
+            resumen = await self.hass.async_add_executor_job(self._probe_authority)
+        except Exception as err:   # best-effort: un instrumento no tumba el arranque
+            _LOGGER.debug("[permisos] no se pudieron consultar: %s", err)
+            return
+        for path, datos in resumen.items():
+            self._diag.record("authority", path=path.rsplit("/", 1)[-1], **datos)
+        try:
+            from ..core import vehicles as V
+
+            self._diag.record("tuserid", **await self.hass.async_add_executor_job(
+                V.probe_tuserid, self.ctx))
+        except Exception as err:   # instrumento: no tumba nada
+            _LOGGER.debug("[cuenta] getTuserId no respondió: %s", err)
+
+    def _probe_authority(self) -> dict:
+        from ..core import vehicles, wake
+
+        wake._bff_login(self.ctx)
+        return vehicles.query_authority(self.ctx)
+
+    def _claim_default_vehicle(self) -> dict:
+        from ..core import vehicles, wake
+
+        ctx = self.ctx
+        wake._bff_login(ctx)
+        # El orden importa: la app lista los vehículos ANTES de fijar el predeterminado, y
+        # saltarse ese paso hace que el siguiente no surta efecto (lo mismo que le pasa a
+        # `checkPassword` en la cadena del taskId).
+        vehicles.query_list(ctx)
+        return vehicles.set_default(ctx)
+
+    @callback
+    def async_review_delegated_account(self) -> None:
+        """Avisa si la cuenta es DELEGADA: con ellas el coche no empuja nada por MQTT.
+
+        Medido con un análisis de tráfico de la app oficial (2026-10-01): con una cuenta
+        secundaria el broker RECHAZA el CONNECT —también el de la app, no solo el nuestro— y lo
+        reintenta en bucle. No hay canal que encontrar. Lo que hace la app para parecer
+        instantánea es PREGUNTAR cada 5 segundos por el canal normal.
+
+        Por eso esto es un aviso y no un arreglo: no hay nada que reparar en la integración. Lo
+        que el usuario necesita saber es por qué puertas y cierre no se mueven solos, y que la
+        salida es configurar los intervalos de consulta — que vienen a 0 («parado») justo porque
+        el diseño daba por hecho que esos avisos llegarían gratis.
+
+        Se mira el dato que la propia nube devuelve (`authorizeType`), no una deducción nuestra.
+        """
+        from homeassistant.helpers import issue_registry as ir
+
+        banderas = self.entry.data.get(DATA_VEHICLE_FLAGS) or {}
+        delegada = str(banderas.get("authorizeType") or "0").strip() == "1"
+        issue_id = f"delegated_account_{self.entry.entry_id}"
+        if not delegada:
+            ir.async_delete_issue(self.hass, DOMAIN, issue_id)
+            return
+        ir.async_create_issue(
+            self.hass, DOMAIN, issue_id,
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="delegated_account",
+            learn_more_url="https://github.com/jcortizronda/ebroAuto_homeAssistant#cuentas-secundarias",
+        )
+
     def _fetch_vehicle_identity(self) -> dict | None:
         """queryList (solo lectura) → identidad del vehículo para el dispositivo de HA.
 
         La llamada y el parseo (el backend devuelve la lista bajo cuatro claves distintas)
-        viven en `core/vehicles`, compartidos con el config flow."""
+        viven en `core/vehicles`, compartidos con el config flow.
+
+        **Narra lo que pasa.** Antes solo hablaba en la rama de excepción: si la respuesta llegaba
+        bien pero no se reconocía ningún coche dentro, devolvía `None` en silencio absoluto. En
+        una instalación real eso dejaba el modelo del dispositivo vacío sin una sola pista, y solo
+        se pudo ver leyendo el código. Lo que se registra es la FORMA de la respuesta —su código y
+        las claves de primer nivel— nunca su contenido: ahí dentro van el VIN y el token."""
         try:
             from ..core import vehicles, wake
 
             ctx = self.ctx
-            wake._bff_login(ctx)
-            info = vehicles.identity(vehicles.query_list(ctx), self.vin)
+            token, _ = wake._bff_login(ctx)
+            if not token:
+                _LOGGER.debug("[vehiculo] identidad: sin sesión BFF, no se consulta queryList")
+                return None
+            respuesta = vehicles.query_list(ctx)
+            info = vehicles.identity(respuesta, self.vin)
             if not info:
+                # La forma, no el contenido: `code` dice si la nube aceptó la petición y las
+                # claves de `data` dicen bajo cuál vino la lista (o si no vino ninguna, que es
+                # justo lo que hay que distinguir).
+                datos = respuesta.get("data") if isinstance(respuesta, dict) else None
+                _LOGGER.debug(
+                    "[vehiculo] queryList no devolvió un coche reconocible · code=%s · "
+                    "tipo de `data`=%s · claves=%s · coches=%d",
+                    (respuesta or {}).get("code") if isinstance(respuesta, dict) else "?",
+                    type(datos).__name__,
+                    sorted(datos) if isinstance(datos, dict) else "-",
+                    len(vehicles.iter_vehicles(respuesta)))
                 return None
             return {CONF_VEHICLE_NAME: info["name"],
                     DATA_VEHICLE_MODEL: info["model"],
                     # La marca es constante: esta integración es solo para Ebro.
-                    DATA_VEHICLE_BRAND: VEHICLE_BRAND}
+                    DATA_VEHICLE_BRAND: VEHICLE_BRAND,
+                    # Solo para el informe de diagnóstico; ver `core.vehicles`.
+                    DATA_VEHICLE_SOURCE: vehicles.source_list(respuesta, self.vin),
+                    DATA_VEHICLE_FIELDS: vehicles.entry_fields(respuesta, self.vin),
+                    DATA_VEHICLE_FLAGS: vehicles.entry_flags(respuesta, self.vin),
+                    DATA_VEHICLE_PROBE_VERSION: VEHICLE_PROBE_VERSION}
         except Exception as err:
             _LOGGER.debug("[vehiculo] identidad no recuperada: %s", err)
             return None

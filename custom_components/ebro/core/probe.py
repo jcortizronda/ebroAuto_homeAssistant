@@ -121,7 +121,13 @@ def probe_once(ctx, publish, force=False, on_data=None):
     globales de módulo, así que con dos coches configurados la sonda de uno consumía el
     cooldown del otro — y leía igualmente el VIN de la última entrada arrancada.
 
-    Devuelve un dict {ok, online, got_data, codes, rich}. Nunca lanza.
+    Devuelve un dict {ok, online, got_data, codes, rich} más el DESGLOSE por endpoint
+    (`got_realtime` / `got_location` / `got_travel`, sus tres códigos con nombre,
+    `has_position` y `duration_ms`). El desglose existe para el monitor de diagnóstico: el
+    resumen agregado no distingue «no contestó nadie» de «contestó la telemetría pero la
+    ubicación devolvió A07900», que es justo la diferencia que costó cuatro días ver en campo.
+    `has_position` es un booleano a propósito — las coordenadas NO entran en el diagnóstico.
+    Nunca lanza.
     `force=True` ignora el cooldown (para la prueba manual).
     `on_data(data)` (opcional): callback invocada con el dict `data` en crudo SOLO cuando
     se reciben datos en vivo (coche despierto) — se usa para publicar GPS/batería en HA.
@@ -185,6 +191,14 @@ def probe_once(ctx, publish, force=False, on_data=None):
               "rich": rich, "data": data or None,
               "travel_data": j3.get("data") if got3 else None})
 
+        # El mismo desglose, pero DEVUELTO: `_log` solo escribe si `EBRO_PROBE_LOG` está en el
+        # entorno, cosa que en una instalación normal de Home Assistant no ocurre nunca. Quien
+        # lo necesita es el monitor de diagnóstico, y para eso tiene que volver al llamador.
+        desglose = {"realtime_code": c1, "location_code": c2, "travel_code": c3,
+                    "got_realtime": got1, "got_location": got2, "got_travel": got3,
+                    "has_position": "lat" in data and "lon" in data,
+                    "duration_ms": int((time.time() - now) * 1000)}
+
         got1 = got1 or got3   # si travelQuery trae datos con el coche despierto, cuenta como "live"
         if (got1 or got2) and on_data and data:
             try:
@@ -203,7 +217,7 @@ def probe_once(ctx, publish, force=False, on_data=None):
             # `queryVehicleLocation` no, decía «🟢 En vivo» tan tranquilo y el mapa se quedaba
             # clavado. Cuatro días costó verlo en campo, y solo mirando el historial. El motivo
             # lo da el código del endpoint de ubicación, que ya teníamos y se tiraba.
-            if "lat" in data and "lon" in data:
+            if desglose["has_position"]:
                 publish(freshness(data, now))
             else:
                 # Decir solo «Sin posición» daría a entender que la consulta entera fracasó, y
@@ -216,10 +230,10 @@ def probe_once(ctx, publish, force=False, on_data=None):
                 # y al resultado de la sonda, que es donde hace falta para diagnosticar.
                 publish("🟠 Con datos, sin posición")
             return {"ok": True, "online": True, "got_data": True,
-                    "codes": [c1, c2, c3], "rich": rich}
+                    "codes": [c1, c2, c3], "rich": rich, **desglose}
 
         publish(f"🔴 Sin datos · {codes.meaning(c1)}")
-        return {"ok": True, "online": False, "got_data": False, "codes": [c1, c2, c3]}
+        return {"ok": True, "online": False, "got_data": False, "codes": [c1, c2, c3], **desglose}
     except Exception as e:
         publish(f"⚠️ Error de sonda · {type(e).__name__}: {e}")
         return {"ok": False, "reason": "exception", "error": str(e)}

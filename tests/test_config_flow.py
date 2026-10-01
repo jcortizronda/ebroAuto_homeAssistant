@@ -15,6 +15,7 @@ from homeassistant.helpers import issue_registry as ir
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.ebro.config_flow import SECTION_ADVANCED
 from custom_components.ebro.const import (
     CONF_AREA_CODE,
     CONF_PASSWORD,
@@ -36,6 +37,10 @@ USER_INPUT = {
     CONF_PASSWORD: "contrasena",
     CONF_PIN: TEST_PIN,
     CONF_AREA_CODE: "34",
+    # Los ajustes internos van en una SECCIÓN plegada. La interfaz siempre la envía (con sus
+    # valores por defecto dentro), aunque el usuario no la despliegue, así que el formulario de
+    # prueba tiene que mandarla igual: vacía, para que los defaults del esquema la rellenen.
+    SECTION_ADVANCED: {},
 }
 
 POLL_INPUT = {

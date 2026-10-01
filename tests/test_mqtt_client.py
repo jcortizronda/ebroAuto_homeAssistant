@@ -45,7 +45,11 @@ def _conectar(cliente_paho, **callbacks):
 
 
 def test_identidad_que_exige_la_acl_del_broker() -> None:
-    """Client id y topic van en la ACL del broker: cambiar el formato es que rechace."""
+    """Client id y topic van en la ACL del broker: cambiar el formato es que rechace.
+
+    El sufijo del broker que usa la app (`-ssl<host y puerto>`) se PROBO y se descarto: con el
+    el broker tiraba la conexion en bucle (9 conexiones y 9 desconexiones de 0 segundos, sin
+    llegar a suscribirse). Mira el clientId, y el formato de la app no nos vale."""
     assert CONFIG.client_id == "app_4_U123"
     assert CONFIG.topic == "app/4/U123/account/msgCenter/msg"
 

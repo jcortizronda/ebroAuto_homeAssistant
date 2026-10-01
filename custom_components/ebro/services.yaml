@@ -1,0 +1,26 @@
+programar_carga:
+  target:
+    entity:
+      integration: ebro
+      domain: switch
+  fields:
+    hora_inicio:
+      required: true
+      example: "02:00:00"
+      selector:
+        time:
+    duracion:
+      required: true
+      example: 240
+      selector:
+        number:
+          min: 60
+          max: 1440
+          step: 15
+          unit_of_measurement: min
+          mode: box
+    activar:
+      required: false
+      default: true
+      selector:
+        boolean:

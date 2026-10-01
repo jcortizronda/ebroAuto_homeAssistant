@@ -58,8 +58,16 @@ class MqttConfig:
         igualmente el nuestro, así que el sufijo no lo exige ninguna ACL.
 
         Y la diferencia es DESEABLE: MQTT obliga a que el clientId sea único, y dos clientes con
-        el mismo se echan mutuamente. Copiar el de la app haría que Home Assistant y el móvil se
-        desconectaran el uno al otro sin parar."""
+        el mismo se echan mutuamente.
+
+        **PROBADO Y DESCARTADO (2026-10-01).** Se uso el formato exacto de la app —
+        `app_<canal>_<tuserid>-ssl<host y puerto sin signos>` — por ser la ultima diferencia
+        conocida entre su cliente y el nuestro, con una cuenta delegada que se suscribe bien y
+        no recibe nada. Resultado medido en vivo: **9 conexiones y 9 desconexiones con 0 segundos
+        de vida**, sin llegar siquiera a suscribirse. El broker SI mira el clientId, y el formato
+        de la app no nos vale — con el nuestro la conexion es estable.
+
+        Queda escrito para que nadie lo vuelva a intentar creyendo que es inofensivo."""
         return f"app_{self.channel_id}_{self.tuserid}"
 
     @property

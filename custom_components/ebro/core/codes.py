@@ -31,6 +31,10 @@ CODE_MEANING = {
     # A07900 es contextual: en poll/probe = coche en reposo; con los comandos = firma o
     # car_token no válidos. Texto neutro que cubre el caso más frecuente.
     "A07900": "coche en reposo / no accesible (o firma/car_token no válidos) ⌛",
+    # A07908/A07909: `message` de un checkPassword con `code=1` → PIN de comandos incorrecto.
+    # Confirmado en campo el 2026-10-01 probando el PIN correcto en la misma cuenta.
+    "A07908": "PIN de comandos incorrecto ❌",
+    "A07909": "PIN de comandos incorrecto ❌",
 }
 
 

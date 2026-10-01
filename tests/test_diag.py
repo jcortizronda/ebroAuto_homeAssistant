@@ -246,6 +246,34 @@ def test_recorder_cuenta_los_eventos(recorder) -> None:
     assert contadores["commands_failed"] == 1
 
 
+def test_recorder_separa_los_tres_desenlaces_de_la_sonda(recorder) -> None:
+    """«Sin datos» y «con datos pero sin posición» NO son lo mismo y llevan a sitios distintos:
+    el primero es un coche dormido del que la nube no guarda nada, el segundo es una nube que
+    contesta con una instantánea vieja y exige forzar el GPS. Confundirlos costó cuatro días."""
+    recorder.record("probe", ok=True, got_data=False, location_code="A07900")
+    recorder.record("probe", ok=True, got_data=True, has_position=False, location_code="A07900")
+    recorder.record("probe", ok=True, got_data=True, has_position=True, location_code="000000")
+
+    contadores = recorder.snapshot()["counters"]
+
+    assert contadores["probe_no_data"] == 1
+    assert contadores["probe_sin_posicion"] == 1
+    assert contadores["probe_con_posicion"] == 1
+
+
+def test_recorder_no_cuenta_como_dormido_lo_que_ni_llego_a_preguntar(recorder) -> None:
+    """El cooldown y la sesión caducada devuelven `ok=False` SIN haber consultado nada. Meterlos
+    en «sin datos» haría parecer al coche más dormido de lo que está."""
+    recorder.record("probe", ok=False, reason="cooldown", wait_s=30)
+    recorder.record("probe", ok=False, reason="no_usertoken")
+
+    contadores = recorder.snapshot()["counters"]
+
+    assert contadores["probe_cooldown"] == 1
+    assert contadores["probe_no_usertoken"] == 1
+    assert "probe_no_data" not in contadores
+
+
 def test_recorder_no_lanza_nunca(recorder) -> None:
     """El monitor observa, no participa: un fallo suyo no puede tumbar un comando."""
     recorder.record("command", objeto_raro=object())

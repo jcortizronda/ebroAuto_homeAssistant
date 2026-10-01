@@ -9,13 +9,15 @@ No está afiliado ni respaldado por Ebro, Chery ni Home Assistant.
 
 ## Qué puedes hacer
 
-**Ver** (sensores): batería, autonomía eléctrica y de combustible, cuentakilómetros, presión y
+**Ver** (sensores): batería, autonomía eléctrica y de combustible, cuentakilómetros total y
+eléctrico, presión y
 temperatura de los cuatro neumáticos, estado y tiempo de carga, ubicación en el mapa, y el estado de
 puertas, ventanillas, maletero, capó, techo y cierre centralizado.
 
 **Controlar** (necesita el PIN del vehículo): abrir y cerrar el coche, climatización con temperatura
 ajustable, asientos y volante calefactables, desempañadores, maletero, ventanillas, techo, alarma,
-carga programada con límite de batería, localizar el coche por GPS y hacerlo sonar y parpadear.
+carga programada con límite de batería, **parar una carga en curso**, localizar el coche por GPS
+y hacerlo sonar y parpadear.
 
 ---
 
@@ -40,11 +42,16 @@ Tras instalar y reiniciar: **Ajustes → Dispositivos y servicios → Añadir in
 
 - **Teléfono** de tu cuenta Ebro, con el prefijo del país.
 - **Contraseña** de la cuenta.
-- **PIN** de 4 dígitos del vehículo (el mismo que usas en la app para los mandos a distancia).
+- **PIN** de comandos remotos: el mismo que te pide la app para abrir o cerrar el coche.
 
-> ⚠️ **Usa la cuenta propietaria del vehículo.** Con una cuenta invitada la integración funciona a
-> medias: inicia sesión y los mandos responden, pero el coche no le envía sus avisos, así que
-> puertas, cierre y maletero dejan de actualizarse solos.
+> ⚠️ **Mejor con la cuenta del titular del vehículo.** Con una cuenta secundaria todo funciona
+> salvo una cosa: el coche no le envía avisos, así que puertas, cierre y maletero no se actualizan
+> solos. Tiene solución —ver [Cuentas secundarias](#cuentas-secundarias)— y la integración te
+> avisa sola si detecta que es tu caso.
+
+Hay además un desplegable **«Avanzado»** con los servidores y el canal de Ebro. Viene relleno con
+los valores correctos para Europa: no lo toques salvo que uses otra región o te lo pidan para
+diagnosticar algo.
 
 El VIN y el resto de datos se detectan solos al iniciar sesión. Home Assistant guarda la sesión y la
 renueva por su cuenta: no tendrás que volver a escribir la contraseña salvo que caduque.
@@ -79,12 +86,15 @@ unas cosas se actualizan solas y otras no.
 
 ### 1. Lo que el coche envía solo
 
-En cuanto cambian, el coche los manda y aparecen al momento. **Funcionan siempre**, incluso con
-«Actualización automática» apagada:
+En cuanto cambian, el coche los manda y aparecen al momento, incluso con «Actualización
+automática» apagada:
 
 - Puertas, ventanillas, maletero, capó, techo y **cierre centralizado**
 - Climatización, desempañadores, volante y asientos: encendido o apagado
 - **Cable de carga** conectado y **motor** en marcha
+
+> **Con una cuenta secundaria, nada de esta lista se actualiza solo.** El coche solo envía
+> avisos a la cuenta del titular. Ver [Cuentas secundarias](#cuentas-secundarias).
 
 ### 2. Lo que hay que consultar
 
@@ -158,6 +168,34 @@ interruptor «Carga programada») para mandárselas al coche.
 El sensor **«Carga programada en el coche»** enseña lo que hay puesto en el vehículo, incluso si lo
 cambiaste desde la app oficial: la hora, si está activada y qué días se aplica.
 
+## Programar la carga desde una automatización
+
+Las entidades de hora y duración **guardan una preferencia**: no mandan nada al coche hasta que
+pulsas «Aplicar carga programada». Es a propósito — así mover un control por accidente no le da
+órdenes al coche.
+
+Para automatizaciones hay una acción que lo hace todo de una vez:
+
+```yaml
+action: ebro.programar_carga
+target:
+  entity_id: switch.ebro_XXXX_carga_programada
+data:
+  hora_inicio: "02:00:00"
+  duracion: 240        # minutos (mínimo 60: el coche rechaza menos)
+  activar: true
+```
+
+Útil, por ejemplo, para cargar en las horas más baratas de luz sin tener que encadenar tres
+llamadas y confiar en el orden.
+
+**Para parar una carga en curso** usa el botón **«Parar carga»**. El interruptor de carga
+programada apagado solo desactiva la programación; no corta una carga ya empezada.
+
+Este coche **no permite arrancar ni parar la carga directamente** (su permiso «Control de Carga»
+viene denegado de fábrica), así que «Parar carga» lo consigue imponiendo una programación cuya
+ventana ya ha terminado. Funciona, pero tarda unos segundos en surtir efecto.
+
 ## Límite de carga
 
 El coche no trae un tope de carga, así que la integración lo hace por su cuenta:
@@ -167,10 +205,37 @@ El coche no trae un tope de carga, así que la integración lo hace por su cuent
 
 Ten en cuenta que:
 
-- Necesita **«Actualización automática» encendida** y el intervalo de **«Cargando» mayor que 0**: es
-  lo que permite ir mirando la batería.
+- Necesita **«Actualización automática» encendida** y el intervalo de **«Cargando» mayor que 0**:
+  es lo que permite ir mirando la batería. La integración no te deja encender el límite si falta
+  alguna de las dos, y te dice cuál; y si quitas una de las dos después, el límite se apaga solo
+  — así no te quedas con un interruptor encendido que no está haciendo nada.
 - Cerca del objetivo consulta más a menudo para afinar el corte, pero aun así puede pasarse un
   **1–2 %** según lo rápido que esté cargando.
+
+---
+
+## Cuentas secundarias
+
+Si usas una **cuenta secundaria** —una a la que el titular del coche le ha dado acceso— hay una
+diferencia que conviene conocer. La integración lo detecta sola y te lo avisa en **Ajustes →
+Reparaciones**.
+
+**Funciona con normalidad:** consultar el estado, la batería, la autonomía, la posición, y todos
+los comandos — abrir, cerrar, climatización, maletero, ventanillas.
+
+**No funciona:** el coche **no envía avisos por su cuenta** a las cuentas secundarias. Puertas,
+cierre y maletero no se actualizan solos.
+
+Es una limitación del servidor de Ebro, no de esta integración: la **app oficial tampoco recibe
+esos avisos** con una cuenta secundaria. Lo que hace para parecer instantánea es **preguntar cada
+pocos segundos**.
+
+**Para que los estados se actualicen solos**, puedes hacer lo mismo: en las opciones de la
+integración, pon un número distinto de 0 en **«Sondeo con el coche parado»**. Cuanto más bajo,
+antes se refleja un cambio — y más peticiones se hacen a la nube de Ebro. Ten en cuenta que la app
+solo pregunta mientras está abierta en pantalla, y Home Assistant lo haría a todas horas.
+
+**Con la cuenta del titular** no hace falta nada de esto: los avisos llegan solos.
 
 ---
 

@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-import logging
 from unittest.mock import AsyncMock, patch
 
 from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
 from homeassistant.const import ATTR_ENTITY_ID, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry, snapshot_platform
 from syrupy.assertion import SnapshotAssertion
 
-from custom_components.ebro.const import COMMANDS_AS_RICH_ENTITY
+from custom_components.ebro.const import COMMANDS_AS_RICH_ENTITY, DOMAIN
 
 from .conftest import get_coordinator
 from .const import FROZEN_TIME
@@ -62,7 +62,8 @@ async def test_solo_quedan_tres_botones_de_comando(
     entidades = er.async_entries_for_config_entry(
         entity_registry, mock_config_entry.entry_id
     )
-    assert len(entidades) == len(sueltos) + 4  # + wake/refresh_pos/refresh_full/charge_plan
+    # + wake/refresh_pos/refresh_full/charge_plan/stop_charge
+    assert len(entidades) == len(sueltos) + 5
 
 
 @pytest.mark.parametrize(
@@ -134,25 +135,31 @@ async def test_botones_de_accion(
     action.assert_awaited_once_with(**kwargs)
 
 
-@pytest.mark.usefixtures("init_integration")
-async def test_un_comando_fallido_no_propaga(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
-) -> None:
-    """`async_press` se traga las excepciones a propósito: el resultado (también de error) ya
-    lo publica el coordinator en `sensor.…_resultado_del_comando`.
+def _religa_wake(hass: HomeAssistant, coordinator) -> None:
+    """Vuelve a ligar el método parcheado al botón.
 
-    Consecuencia para quien escriba tests: hay que afirmar sobre el mock y el log, NUNCA con
-    `pytest.raises`.
-    """
+    `EbroActionButton` recibe `coord.async_wake` YA LIGADO en el constructor, así que parchear
+    el coordinator después no le llega. Es una peculiaridad de cómo se construyen estos botones,
+    no del comportamiento que se está probando."""
+    hass.data["entity_components"][BUTTON_DOMAIN].get_entity(
+        "button.ebro_0001_despertar_coche"
+    )._action = coordinator.async_wake
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_un_comando_fallido_avisa_al_usuario(hass: HomeAssistant) -> None:
+    """Antes se tragaba la excepción y solo la escribía en el log: pulsabas el botón, no pasaba
+    nada, y no había forma de saberlo sin ir a mirar los registros. El resto de la integración
+    (candado, persianas, clima) sí avisa, así que los botones eran la excepción."""
     coordinator = _coordinator(hass)
 
     with (
-        caplog.at_level(logging.ERROR),
         patch.object(
             coordinator,
             "async_send_command",
             AsyncMock(side_effect=RuntimeError("A00082 coche ocupado")),
         ) as send,
+        pytest.raises(HomeAssistantError, match="localizar_coche_gps"),
     ):
         await hass.services.async_call(
             BUTTON_DOMAIN,
@@ -162,24 +169,42 @@ async def test_un_comando_fallido_no_propaga(
         )
 
     send.assert_awaited_once()
-    assert "localizar_coche_gps" in caplog.text
 
 
 @pytest.mark.usefixtures("init_integration")
-async def test_una_accion_fallida_no_propaga(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
-) -> None:
+async def test_un_mensaje_ya_pensado_para_el_usuario_no_se_envuelve(hass: HomeAssistant) -> None:
+    """El de la cola ocupada es el caso que destapó todo esto: `async_send_command` lo genera
+    ANTES de publicar nada, así que desde un botón no llegaba a ninguna parte — ni al aviso ni
+    al sensor de «Resultado del comando». Y al propagarlo hay que reenviarlo TAL CUAL: envolverlo
+    daría «El comando «localizar_coche_gps» ha fallado: El coche sigue ocupado…»."""
+    coordinator = _coordinator(hass)
+    ocupado = HomeAssistantError("El coche sigue ocupado con los comandos anteriores.")
+
+    with (
+        patch.object(coordinator, "async_send_command", AsyncMock(side_effect=ocupado)),
+        pytest.raises(HomeAssistantError) as capt,
+    ):
+        await hass.services.async_call(
+            BUTTON_DOMAIN,
+            SERVICE_PRESS,
+            {ATTR_ENTITY_ID: "button.ebro_0001_localizar_coche_gps"},
+            blocking=True,
+        )
+
+    assert str(capt.value) == "El coche sigue ocupado con los comandos anteriores."
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_una_accion_fallida_habla_del_nombre_del_boton(hass: HomeAssistant) -> None:
+    """«Despertar coche», no «Comando «wake» fallido»: el usuario ha pulsado un botón con un
+    nombre, no ha invocado una clave interna."""
     coordinator = _coordinator(hass)
 
     with (
-        caplog.at_level(logging.ERROR),
-        patch.object(coordinator, "async_wake", AsyncMock(side_effect=OSError("red"))),
+        patch.object(coordinator, "async_wake", AsyncMock(side_effect=RuntimeError("sin red"))),
+        pytest.raises(HomeAssistantError, match="Despertar coche"),
     ):
-        # el botón ya tiene ligado el método original, así que se parchea el objeto ligado
-        entidad = hass.data["entity_components"][BUTTON_DOMAIN].get_entity(
-            "button.ebro_0001_despertar_coche"
-        )
-        entidad._action = coordinator.async_wake
+        _religa_wake(hass, coordinator)
         await hass.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
@@ -187,4 +212,46 @@ async def test_una_accion_fallida_no_propaga(
             blocking=True,
         )
 
-    assert "Despertar coche" in caplog.text
+
+@pytest.mark.usefixtures("init_integration")
+async def test_los_errores_de_los_botones_son_traducibles(hass: HomeAssistant) -> None:
+    """Sin `translation_key` la interfaz pinta «No se pudo realizar la acción button.press» con
+    nuestro texto pegado detrás; con ella pinta solo nuestro texto. El mensaje en claro se
+    conserva igualmente, porque es lo que se ve en el log."""
+    coordinator = _coordinator(hass)
+
+    with (
+        patch.object(coordinator, "async_wake", AsyncMock(side_effect=RuntimeError("sin red"))),
+        pytest.raises(HomeAssistantError) as capt,
+    ):
+        _religa_wake(hass, coordinator)
+        await hass.services.async_call(
+            BUTTON_DOMAIN,
+            SERVICE_PRESS,
+            {ATTR_ENTITY_ID: "button.ebro_0001_despertar_coche"},
+            blocking=True,
+        )
+
+    assert capt.value.translation_domain == DOMAIN
+    assert capt.value.translation_key == "action_failed"
+    assert capt.value.translation_placeholders["name"] == "Despertar coche"
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_una_accion_fallida_avisa_al_usuario(hass: HomeAssistant) -> None:
+    """Igual que con los comandos: antes solo iba al log."""
+    coordinator = _coordinator(hass)
+
+    with patch.object(coordinator, "async_wake", AsyncMock(side_effect=OSError("red"))):
+        # el botón ya tiene ligado el método original, así que se parchea el objeto ligado
+        entidad = hass.data["entity_components"][BUTTON_DOMAIN].get_entity(
+            "button.ebro_0001_despertar_coche"
+        )
+        entidad._action = coordinator.async_wake
+        with pytest.raises(HomeAssistantError, match="Despertar coche"):
+            await hass.services.async_call(
+                BUTTON_DOMAIN,
+                SERVICE_PRESS,
+                {ATTR_ENTITY_ID: "button.ebro_0001_despertar_coche"},
+                blocking=True,
+            )

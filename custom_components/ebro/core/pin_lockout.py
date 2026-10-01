@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Anti-bloqueo del PIN de comandos — estado encapsulado, con lock interno.
 
-**El riesgo que este módulo existe para contener.** El PIN de 4 cifras de los comandos
+**El riesgo que este módulo existe para contener.** El PIN de los comandos
 remotos lo verifica el backend Chery (`checkPassword`). Cada verificación fallida incrementa
 un contador de errores DEL LADO DE CHERY: superado el umbral, la cuenta se bloquea — y ese
 bloqueo no se resuelve desde Home Assistant. Por eso el componente se autolimita: tras

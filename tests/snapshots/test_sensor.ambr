@@ -565,6 +565,65 @@
     'state': '12345.0',
   })
 # ---
+# name: test_entities[sensor.ebro_0001_cuentakilometros_ev-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': dict({
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.TOTAL_INCREASING: 'total_increasing'>,
+    }),
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': None,
+    'entity_id': 'sensor.ebro_0001_cuentakilometros_ev',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+      'sensor': dict({
+        'suggested_display_precision': 2,
+      }),
+    }),
+    'original_device_class': <SensorDeviceClass.DISTANCE: 'distance'>,
+    'original_icon': 'mdi:counter',
+    'original_name': 'Cuentakilómetros EV',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_cuentakilometros_ev',
+    'supported_features': 0,
+    'translation_key': 'cuentakilometros_ev',
+    'unique_id': 'LSJA0000000000001_rt_km_electrico',
+    'unit_of_measurement': <UnitOfLength.KILOMETERS: 'km'>,
+  })
+# ---
+# name: test_entities[sensor.ebro_0001_cuentakilometros_ev-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'distance',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Cuentakilómetros EV',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:counter',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.TOTAL_INCREASING: 'total_increasing'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: <UnitOfLength.KILOMETERS: 'km'>,
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.ebro_0001_cuentakilometros_ev',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
 # name: test_entities[sensor.ebro_0001_datos_del_coche_actualizados-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -1810,7 +1869,7 @@
     'options': dict({
     }),
     'original_device_class': <SensorDeviceClass.TIMESTAMP: 'timestamp'>,
-    'original_icon': 'mdi:map-marker-clock',
+    'original_icon': 'mdi:map-clock',
     'original_name': 'Última ubicación',
     'platform': 'ebro',
     'previous_unique_id': None,
@@ -1826,7 +1885,7 @@
     'attributes': ReadOnlyDict({
       <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'timestamp',
       <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Última ubicación',
-      <EntityStateAttribute.ICON: 'icon'>: 'mdi:map-marker-clock',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:map-clock',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.ebro_0001_ultima_ubicacion',
@@ -2555,6 +2614,65 @@
     }),
     'context': <ANY>,
     'entity_id': 'sensor.ebro_0001_cuentakilometros',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_entities_arranque_en_frio[sensor.ebro_0001_cuentakilometros_ev-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': dict({
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.TOTAL_INCREASING: 'total_increasing'>,
+    }),
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': None,
+    'entity_id': 'sensor.ebro_0001_cuentakilometros_ev',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+      'sensor': dict({
+        'suggested_display_precision': 2,
+      }),
+    }),
+    'original_device_class': <SensorDeviceClass.DISTANCE: 'distance'>,
+    'original_icon': 'mdi:counter',
+    'original_name': 'Cuentakilómetros EV',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_cuentakilometros_ev',
+    'supported_features': 0,
+    'translation_key': 'cuentakilometros_ev',
+    'unique_id': 'LSJA0000000000001_rt_km_electrico',
+    'unit_of_measurement': <UnitOfLength.KILOMETERS: 'km'>,
+  })
+# ---
+# name: test_entities_arranque_en_frio[sensor.ebro_0001_cuentakilometros_ev-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'distance',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Cuentakilómetros EV',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:counter',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.TOTAL_INCREASING: 'total_increasing'>,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: <UnitOfLength.KILOMETERS: 'km'>,
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.ebro_0001_cuentakilometros_ev',
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,
@@ -3806,7 +3924,7 @@
     'options': dict({
     }),
     'original_device_class': <SensorDeviceClass.TIMESTAMP: 'timestamp'>,
-    'original_icon': 'mdi:map-marker-clock',
+    'original_icon': 'mdi:map-clock',
     'original_name': 'Última ubicación',
     'platform': 'ebro',
     'previous_unique_id': None,
@@ -3822,7 +3940,7 @@
     'attributes': ReadOnlyDict({
       <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'timestamp',
       <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Última ubicación',
-      <EntityStateAttribute.ICON: 'icon'>: 'mdi:map-marker-clock',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:map-clock',
     }),
     'context': <ANY>,
     'entity_id': 'sensor.ebro_0001_ultima_ubicacion',

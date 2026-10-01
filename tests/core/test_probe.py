@@ -7,6 +7,7 @@ El log en crudo de la sonda queda vacío por defecto en el `CoreCtx`, así que n
 
 from __future__ import annotations
 
+import json
 import time
 from unittest.mock import Mock, patch
 
@@ -129,6 +130,40 @@ def test_probe_once_coche_dormido(ctx: CoreCtx) -> None:
     assert res["got_data"] is False
     assert res["codes"] == ["A07900", "A07900", "A07900"]
     on_data.assert_not_called()
+
+
+def test_probe_once_devuelve_el_desglose_por_endpoint(ctx: CoreCtx) -> None:
+    """El resumen agregado (`got_data`) no distingue «no contestó nadie» de «contestó la
+    telemetría pero la ubicación no». El monitor de diagnóstico necesita esa diferencia, así que
+    la sonda tiene que DEVOLVERLA: el log JSONL de `_log` depende de una variable de entorno que
+    en una instalación normal de Home Assistant nadie tiene puesta."""
+    with (
+        patch.object(probe.W, "_bff_login", return_value=("UT", "TU")),
+        patch.object(probe.W, "_signed_post", _post({"realtime": REALTIME_OK})),
+    ):
+        res = probe.probe_once(ctx, lambda _m: None, force=True)
+
+    assert res["got_realtime"] is True
+    assert res["got_location"] is False          # la ubicación no contestó...
+    assert res["got_data"] is True               # ...pero la telemetría sí
+    assert res["has_position"] is False
+    assert res["location_code"] == "A07900"
+    assert isinstance(res["duration_ms"], int)
+
+
+def test_el_desglose_no_lleva_coordenadas(ctx: CoreCtx) -> None:
+    """`has_position` es un booleano a propósito: este dict acaba en el archivo de diagnóstico,
+    que se comparte con terceros. La posición viaja al device_tracker por `on_data`."""
+    with (
+        patch.object(probe.W, "_bff_login", return_value=("UT", "TU")),
+        patch.object(probe.W, "_signed_post",
+                     _post({"realtime": REALTIME_OK, "queryVehicleLocation": LOCATION_FRESCA})),
+    ):
+        res = probe.probe_once(ctx, lambda _m: None, force=True, on_data=Mock())
+
+    assert res["has_position"] is True
+    assert "lat" not in res and "lon" not in res
+    assert "41.385064" not in json.dumps(res, default=str)
 
 
 def test_probe_once_sesion_caducada(ctx: CoreCtx) -> None:

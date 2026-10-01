@@ -2,7 +2,7 @@
 """El taskId: cómo se consigue, y por qué hay que tener cuidado al pedirlo.
 
 Ningún comando parte sin un `taskId` validado por `checkPassword`, y `checkPassword` verifica
-el PIN de 4 cifras contra el backend de Chery. **Cada verificación fallida incrementa un
+el PIN de comandos contra el backend de Chery. **Cada verificación fallida incrementa un
 contador de errores del lado de Chery**, y superado el umbral la cuenta se bloquea — un bloqueo
 que no se resuelve desde Home Assistant. De ahí que este módulo haga tres cosas antes de
 preguntar:
@@ -20,6 +20,7 @@ propio porque es lo que más cuidado merece del componente entero.
 import hashlib
 import logging
 import os
+import re
 import time
 
 from . import ebro_auth as A, routing, wake
@@ -149,9 +150,17 @@ def _checkpassword(ctx, tuid, attempt):
     bff("/tsp/v1/app/vmc/setVecDefault", {"vin": ctx.vin})
     plain = hashlib.md5(ctx.pin.encode()).hexdigest()
     password = A.sm4_code(plain, "padRight32")
-    j = bff("/tsp/v1/app/cpm/checkPassword",
-            {"vin": ctx.vin, "tUserId": str(tuid), "channelId": ctx.channel_id,
-             "password": password, "needDecode": 0, "scene": 0, "type": 0})
+    # El cuerpo PROBADO, el mismo desde el prototipo anterior al repositorio. Se probaron
+    # encima `passwordType` y los cinco campos de identificación de cliente que la app manda
+    # (deviceId, platform, source, terminalType, appVersion): el servidor contestó exactamente
+    # lo mismo, `code=1 'A07908'`, con todos y con ninguno.
+    #
+    # Se retiran en vez de dejarse «por si acaso». Esta petición es la que cierra el coche de
+    # alguien, y añadirle campos inventados que no se han visto funcionar NUNCA no es cautela:
+    # es riesgo sin contrapartida. Quedan en el historial por si algún día hay información nueva.
+    cuerpo = {"vin": ctx.vin, "tUserId": str(tuid), "channelId": ctx.channel_id,
+              "password": password, "needDecode": 0, "scene": 0, "type": 0}
+    j = bff("/tsp/v1/app/cpm/checkPassword", cuerpo)
     data = j.get("data") if isinstance(j.get("data"), dict) else {}
     tid = data.get("taskId") or j.get("taskId")
     if tid:
@@ -173,7 +182,12 @@ def _checkpassword(ctx, tuid, attempt):
     # una única consulta a la tabla decide el remedio Y si contar para el bloqueo. Antes eran
     # dos `if` sobre conjuntos separados más una rama por defecto: tres puntos que mantener
     # alineados a mano, y ahí es donde la clasificación se había torcido.
-    outcome = routing.classify(code, routing.CONTEXT_CHECKPASSWORD)
+    # Se clasifica por el dato MÁS específico. Este backend contesta `code=1` —su rechazo
+    # genérico, el mismo que devuelve un queryList mal formado— y pone el código real en el
+    # `message`. Clasificar por el `1` mandaba todo a la regla por defecto, que culpa al PIN y
+    # gasta un intento del anti-bloqueo: así se acusó durante horas a un PIN que era correcto.
+    especifico = cp_msg if re.fullmatch(r"A\d{5}", cp_msg) else code
+    outcome = routing.classify(especifico, routing.CONTEXT_CHECKPASSWORD)
     if outcome.counts_for_lockout:
         attempt.record_failure()
     raise CommandError(_checkpassword_message(outcome, detail),

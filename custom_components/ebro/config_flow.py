@@ -18,7 +18,7 @@ from typing import Any
 
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import AbortFlow
+from homeassistant.data_entry_flow import AbortFlow, section
 from homeassistant.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
@@ -58,6 +58,9 @@ from .const import (
     DOMAIN,
 )
 from .vehicle.config import VehicleConfig, build_ctx
+
+#: Clave de la sección plegable con los ajustes internos (hosts, puerto, canal).
+SECTION_ADVANCED = "avanzado"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -187,6 +190,17 @@ class EbroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         reason = ""
         if user_input is not None:
+            # Una sección entrega sus campos ANIDADOS bajo su propia clave; el resto del flujo
+            # (login, `_discover`, `entry.data`) espera un dict plano, así que se aplana aquí y
+            # no se propaga la forma de la interfaz al resto del componente.
+            #
+            # SIN mutar lo recibido: un `pop` sobre `user_input` vacía el dict del llamador, y
+            # entonces el SEGUNDO envío del mismo formulario —el reintento tras un error de
+            # credenciales— llega ya sin la sección y lo rechaza la validación. Lo cazó el test
+            # de recuperación, que reutiliza el mismo formulario.
+            avanzado = user_input.get(SECTION_ADVANCED) or {}
+            user_input = {k: v for k, v in user_input.items() if k != SECTION_ADVANCED}
+            user_input.update(avanzado)
             self._data.update(user_input)
             ok, msg = await self.hass.async_add_executor_job(
                 _password_login, self.hass, self._data
@@ -221,11 +235,16 @@ class EbroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 TextSelectorConfig(type=TextSelectorType.PASSWORD)),
             vol.Optional(CONF_AREA_CODE, default=DEFAULT_AREA_CODE): str,
         }
-        # Ajustes internos (hosts, puerto MQTT, channel id, carpeta de certificados). Son fijos
-        # para Ebro EU y el coordinador los rellena solos desde DEFAULTS, así que solo se muestran
-        # con el «Modo avanzado» del perfil de HA activado (usuarios/regiones especiales).
-        if self.show_advanced_options:
-            fields.update({
+        # Ajustes internos (hosts, puerto MQTT, channel id, carpeta de certificados): fijos para
+        # Ebro EU y rellenados solos desde DEFAULTS, así que van en una SECCIÓN PLEGADA.
+        #
+        # Antes dependían del «Modo avanzado» del perfil de HA, que es un ajuste global del
+        # usuario y escondía estos campos a quien no supiera que existe. Home Assistant lo
+        # desaconseja explícitamente —avisa en el log de que `show_advanced_options` desaparece
+        # en 2027.6 y recomienda una sección—, así que esto arregla las dos cosas de una vez:
+        # se ven siempre, plegados, sin tocar nada del perfil.
+        fields[vol.Required(SECTION_ADVANCED)] = section(
+            vol.Schema({
                 vol.Optional(CONF_BFF, default=DEFAULTS[CONF_BFF]): str,
                 vol.Optional(CONF_TSP_HOST, default=DEFAULTS[CONF_TSP_HOST]): str,
                 vol.Optional(CONF_CAR_MQTT_HOST, default=DEFAULTS[CONF_CAR_MQTT_HOST]): str,
@@ -233,7 +252,9 @@ class EbroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                              default=DEFAULTS[CONF_CAR_MQTT_PORT]): vol.Coerce(int),
                 vol.Optional(CONF_CHANNEL_ID, default=DEFAULTS[CONF_CHANNEL_ID]): str,
                 vol.Optional(CONF_CERTS_SRC, default=""): str,
-            })
+            }),
+            {"collapsed": True},
+        )
         return self.async_show_form(step_id="user", data_schema=vol.Schema(fields), errors=errors,
                                     description_placeholders={"reason": reason})
 

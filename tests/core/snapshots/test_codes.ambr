@@ -11,5 +11,7 @@
     'A00567': 'parámetros de checkPassword incompletos ❌',
     'A07312': 'límite de despertar 🚫 (el coche rechaza más despertares ahora, reinténtalo más tarde)',
     'A07900': 'coche en reposo / no accesible (o firma/car_token no válidos) ⌛',
+    'A07908': 'PIN de comandos incorrecto ❌',
+    'A07909': 'PIN de comandos incorrecto ❌',
   })
 # ---

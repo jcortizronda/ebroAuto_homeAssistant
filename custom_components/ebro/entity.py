@@ -75,6 +75,25 @@ class EbroEntity(CoordinatorEntity[EbroCoordinator]):
         )
 
 
+    def _command_error(self, key: str, err: Exception) -> HomeAssistantError:
+        """Error legible cuando el comando falla. Las subclases con un dominio propio
+        (p. ej. `climate`) lo redefinen para hablar de su función y no de la clave interna.
+
+        Vive en `EbroEntity` y no en `EbroOptimisticMixin` porque no tiene nada que ver con el
+        estado optimista: los BOTONES también fallan y no usan ese mixin.
+
+        Lleva mensaje Y clave de traducción a propósito, que no es redundante: el mensaje es lo
+        que se ve en el log y lo que devuelve `str(err)`; la clave es lo que usa la interfaz para
+        pintar el aviso flotante. Sin la clave, el aviso sale como «No se pudo realizar la acción
+        button.press» con nuestro texto pegado detrás; con ella, sale solo nuestro texto."""
+        return HomeAssistantError(
+            f"Comando «{key}» fallido: {err}",
+            translation_domain=DOMAIN,
+            translation_key="command_failed",
+            translation_placeholders={"name": key, "error": str(err)},
+        )
+
+
 class EbroRestoreStateMixin:
     """Restaura el último estado on/off conocido al reiniciar Home Assistant.
 
@@ -148,11 +167,6 @@ class EbroOptimisticMixin:
         como `self._optimistic_or(self._restored_or(live))` en cinco clases. Requiere que la
         entidad use también `EbroRestoreStateMixin`, que es el caso de las cinco."""
         return self._optimistic_or(self._restored_or(live))
-
-    def _command_error(self, key: str, err: Exception) -> HomeAssistantError:
-        """Error legible cuando el comando falla. Las subclases con un dominio propio
-        (p. ej. `climate`) lo redefinen para hablar de su función y no de la clave interna."""
-        return HomeAssistantError(f"Comando «{key}» fallido: {err}")
 
     async def _run_command(self, key: str, target, params: dict | None = None) -> None:
         """Ejecuta un comando mostrando de inmediato el estado objetivo (optimista).

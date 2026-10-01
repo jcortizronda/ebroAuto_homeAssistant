@@ -313,6 +313,28 @@ class DiagRecorder:
             key = ev.get("key")
             if key:
                 self._unknown[str(key)] += 1
+        elif etype == "probe":
+            # Tres desenlaces que hay que poder separar de un vistazo, porque llevan a sitios
+            # distintos: sin datos = el coche duerme y la nube no guarda nada; con datos pero
+            # sin posición = la nube contesta con una instantánea vieja y hace falta forzar el
+            # GPS; completa = todo bien. Sumadas dan las sondas con respuesta.
+            if not ev.get("ok"):
+                # no llegó a preguntar: `busy`, `cooldown`, `no_usertoken`, `exception`. Cuentan
+                # por su motivo — meterlas en «sin datos» haría parecer al coche más dormido de
+                # lo que está, que es justo la confusión que este registro viene a deshacer.
+                self._counters[f"probe_{ev.get('reason') or 'error'}"] += 1
+            elif not ev.get("got_data"):
+                self._counters["probe_no_data"] += 1
+            elif ev.get("has_position"):
+                self._counters["probe_con_posicion"] += 1
+            else:
+                self._counters["probe_sin_posicion"] += 1
+            code = ev.get("location_code")
+            if code:
+                self._cp_codes[f"location:{code}"] += 1
+            ms = ev.get("duration_ms")
+            if isinstance(ms, int):
+                self._latency.setdefault("probe", []).append(ms)
         elif etype == "hv_followup":
             self._counters["hv_followup_orphan" if ev.get("orphan")
                            else "hv_followup_arms"] += 1

@@ -1,4 +1,4 @@
-"""Repair flow de Ebro Auto — "PIN de comandos erróneo": reconfigura el PIN de 4 cifras de
+"""Repair flow de Ebro Auto — "PIN de comandos erróneo": reconfigura el PIN de comandos de
 los comandos remotos sin desmontar la integración.
 
 El aviso lo crea el coordinator (`_raise_pin_issue`) cuando un comando falla porque el

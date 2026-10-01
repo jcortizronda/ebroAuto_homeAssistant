@@ -85,13 +85,18 @@ def test_code_normalizado(code, esperado) -> None:
 
 def test_solo_los_codigos_de_pin_cuentan_para_el_bloqueo() -> None:
     """Contar errores de permisos/config acercaría el bloqueo real de la cuenta por una causa
-    que con el PIN no tiene nada que ver — es el bug P1-2 que documenta el módulo."""
+    que con el PIN no tiene nada que ver — es el bug P1-2 que documenta el módulo.
+
+    La lista es EXHAUSTIVA a propósito: añadir un código aquí significa decidir que puede gastar
+    intentos de la cuenta del usuario, y eso merece pasar por este test y no colarse por la regla
+    por defecto. A07908/A07909 entraron el 2026-10-01 tras confirmarse en campo que son un PIN
+    erróneo de verdad."""
     bloqueantes = {
         code
         for code in set(routing._TABLE) | set(routing._OVERRIDE_CHECKPASSWORD)
         if routing.classify(code, routing.CONTEXT_CHECKPASSWORD).counts_for_lockout
     }
-    assert bloqueantes == {"A00285", "A00282"}
+    assert bloqueantes == {"A00285", "A00282", "A07908", "A07909"}
 
 
 @pytest.mark.parametrize(
@@ -116,3 +121,31 @@ def test_vistas_derivadas_coinciden_con_la_tabla() -> None:
     assert {"A00082"} == routing.RETRYABLE_CODES
     assert {"A00089", "A00546", "A00567"} == routing.TASKID_INVALID
     assert routing.SUCCESS_CODES.isdisjoint(routing.FAILURE_CODES)
+
+
+def test_la_familia_a079_de_checkpassword_SI_es_el_pin() -> None:
+    """Confirmado en campo el 2026-10-01: con el PIN correcto el mismo comando salió a la
+    primera, en la misma cuenta y tras toda una mañana dando A07908/A07909.
+
+    Durante unas horas estuvieron clasificados al revés, con un razonamiento que parecía sólido
+    —la app aceptaba el PIN que a nosotros nos fallaba— y una premisa falsa: la app estaba
+    aceptando el PIN NUEVO de otra cuenta.
+
+    Esta prueba existe porque equivocarse aquí no lo paga el software, lo paga la cuenta del
+    usuario: sin `counts_for_lockout` el anti-bloqueo deja de frenar un PIN realmente erróneo y
+    Chery acaba bloqueando la cuenta."""
+    for code in ("A07908", "A07909"):
+        resultado = routing.classify(code, routing.CONTEXT_CHECKPASSWORD)
+
+        assert resultado.counts_for_lockout is True, code
+        assert resultado.reason == routing.REASON_PIN, code
+
+
+def test_los_permisos_del_vehiculo_no_cuentan_para_el_bloqueo() -> None:
+    """La otra mitad, que sigue en pie: un rechazo por permisos o por petición malformada no
+    debe acercar el bloqueo de la cuenta por una causa ajena al PIN."""
+    for code in ("A00374", "A00554", "A00757"):
+        resultado = routing.classify(code, routing.CONTEXT_CHECKPASSWORD)
+
+        assert resultado.counts_for_lockout is False, code
+        assert resultado.reason == routing.REASON_CONFIG, code

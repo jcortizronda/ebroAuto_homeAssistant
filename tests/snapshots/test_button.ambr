@@ -305,6 +305,57 @@
     'state': 'unknown',
   })
 # ---
+# name: test_entities[button.ebro_0001_parar_carga-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.ebro_0001_parar_carga',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': None,
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': 'mdi:stop-circle-outline',
+    'original_name': 'Parar carga',
+    'platform': 'ebro',
+    'previous_unique_id': None,
+    'suggested_object_id': 'ebro_0001_parar_carga',
+    'supported_features': 0,
+    'translation_key': 'parar_carga',
+    'unique_id': 'LSJA0000000000001_stop_charge',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[button.ebro_0001_parar_carga-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Ebro S900 Parar carga',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:stop-circle-outline',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.ebro_0001_parar_carga',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
 # name: test_entities[button.ebro_0001_ventilar_ventanillas-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
