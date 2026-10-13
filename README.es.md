@@ -2,10 +2,23 @@
 
 **🌍 Idioma:** [English](README.md) · **Español**
 
+[![HACS Custom][hacsbadge]][hacs]
+[![GitHub release][releasebadge]][releases]
+[![Validate][validatebadge]][validate]
+[![License: MIT][licensebadge]](LICENSE)
+[![GitHub stars][starsbadge]][stars]
+
 Controla y consulta tu coche **Ebro** desde Home Assistant, sin depender de la app oficial.
 
-⚠️ **Proyecto no oficial.** Uso estrictamente personal, sobre tu propio vehículo y tu propia cuenta.
-No está afiliado ni respaldado por Ebro, Chery ni Home Assistant.
+> ⚠️ **Proyecto no oficial.** Uso estrictamente personal, sobre tu propio vehículo y tu propia
+> cuenta. No está afiliado ni respaldado por Ebro, Chery ni Home Assistant.
+
+<p align="center">
+  <img src="examples/card-overview.png" alt="Tarjeta resumen del vehículo" width="200">
+  <img src="examples/card-status.png" alt="Puertas, ventanillas y avisos" width="200">
+  <img src="examples/card-tyres.png" alt="Presión y temperatura de neumáticos" width="200">
+  <img src="examples/card-charging.png" alt="Estado de carga" width="200">
+</p>
 
 ---
 
@@ -25,6 +38,8 @@ y hacerlo sonar y parpadear.
 
 ## Instalación
 
+[![Abre tu instancia de Home Assistant y este repositorio en HACS.][hacsrepobadge]][hacsrepo]
+
 ### Opción A — HACS (recomendada)
 1. En Home Assistant: **HACS → Integraciones → menú (⋮) → Repositorios personalizados**.
 2. Añade la URL de este repositorio con la categoría **Integración**.
@@ -39,6 +54,8 @@ y hacerlo sonar y parpadear.
 ## Configuración
 
 Tras instalar y reiniciar: **Ajustes → Dispositivos y servicios → Añadir integración → Ebro Auto**.
+
+[![Abre tu instancia de Home Assistant y empieza a configurar una nueva integración.][configflowbadge]][configflow]
 
 ### Paso 1 — tu cuenta
 
@@ -265,6 +282,13 @@ En este repositorio tienes una lista para adaptar:
 Todo el tráfico va directo entre tu Home Assistant y los servidores de Ebro/Chery, y tus
 credenciales no salen de tu instalación.
 
+## Apoyar el proyecto
+
+Si esta integración te resulta útil, puedes apoyar su desarrollo:
+
+[![Ko-fi][kofibadge]][kofi]
+[![PayPal][paypalbadge]][paypal]
+
 ## Agradecimientos
 
 Basada en el excelente trabajo de
@@ -273,3 +297,22 @@ Basada en el excelente trabajo de
 ## Licencia
 
 MIT — ver [LICENSE](LICENSE).
+
+<!-- Badges -->
+[hacs]: https://github.com/hacs/default
+[hacsbadge]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg
+[releases]: https://github.com/jcortizronda/ebroAuto_homeAssistant/releases
+[releasebadge]: https://img.shields.io/github/v/release/jcortizronda/ebroAuto_homeAssistant
+[validate]: https://github.com/jcortizronda/ebroAuto_homeAssistant/actions/workflows/validate.yml
+[validatebadge]: https://img.shields.io/github/actions/workflow/status/jcortizronda/ebroAuto_homeAssistant/validate.yml?branch=main&label=validate
+[licensebadge]: https://img.shields.io/github/license/jcortizronda/ebroAuto_homeAssistant
+[stars]: https://github.com/jcortizronda/ebroAuto_homeAssistant/stargazers
+[starsbadge]: https://img.shields.io/github/stars/jcortizronda/ebroAuto_homeAssistant?style=flat
+[hacsrepo]: https://my.home-assistant.io/redirect/hacs_repository/?owner=jcortizronda&repository=ebroAuto_homeAssistant&category=integration
+[hacsrepobadge]: https://my.home-assistant.io/badges/hacs_repository.svg
+[configflow]: https://my.home-assistant.io/redirect/config_flow_start/?domain=ebro
+[configflowbadge]: https://my.home-assistant.io/badges/config_flow_start.svg
+[kofi]: https://ko-fi.com/jcortizronda
+[kofibadge]: https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white
+[paypal]: https://www.paypal.me/jcortizronda/
+[paypalbadge]: https://img.shields.io/badge/PayPal-Donate-00457C?logo=paypal&logoColor=white

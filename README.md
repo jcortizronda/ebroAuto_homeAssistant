@@ -14,7 +14,10 @@ Monitor and control your **Ebro** car from Home Assistant, without relying on th
 > Not affiliated with or endorsed by Ebro, Chery or Home Assistant.
 
 <p align="center">
-  <img src="examples/S900_General.png" alt="Ebro S900" width="520">
+  <img src="examples/card-overview.png" alt="Vehicle overview card" width="200">
+  <img src="examples/card-status.png" alt="Doors, windows and warnings" width="200">
+  <img src="examples/card-tyres.png" alt="Tyre pressure and temperature" width="200">
+  <img src="examples/card-charging.png" alt="Charging status" width="200">
 </p>
 
 ---
@@ -266,6 +269,13 @@ This repository has a ready-made config to adapt:
 All traffic goes directly between your Home Assistant and the Ebro/Chery servers, and your
 credentials never leave your installation.
 
+## Support
+
+If this integration is useful to you, you can support its development:
+
+[![Ko-fi][kofibadge]][kofi]
+[![PayPal][paypalbadge]][paypal]
+
 ## Credits
 
 Based on the excellent work of
@@ -289,3 +299,7 @@ MIT — see [LICENSE](LICENSE).
 [hacsrepobadge]: https://my.home-assistant.io/badges/hacs_repository.svg
 [configflow]: https://my.home-assistant.io/redirect/config_flow_start/?domain=ebro
 [configflowbadge]: https://my.home-assistant.io/badges/config_flow_start.svg
+[kofi]: https://ko-fi.com/jcortizronda
+[kofibadge]: https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white
+[paypal]: https://www.paypal.me/jcortizronda/
+[paypalbadge]: https://img.shields.io/badge/PayPal-Donate-00457C?logo=paypal&logoColor=white
