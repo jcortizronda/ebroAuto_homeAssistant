@@ -1,180 +1,188 @@
-# Ebro Auto — Integración para Home Assistant
+# Ebro Auto — Home Assistant integration
 
-Controla y consulta tu coche **Ebro** desde Home Assistant, sin depender de la app oficial.
+**🌍 Language:** **English** · [Español](README.es.md)
 
-⚠️ **Proyecto no oficial.** Uso estrictamente personal, sobre tu propio vehículo y tu propia cuenta.
-No está afiliado ni respaldado por Ebro, Chery ni Home Assistant.
+[![HACS Custom][hacsbadge]][hacs]
+[![GitHub release][releasebadge]][releases]
+[![Validate][validatebadge]][validate]
+[![License: MIT][licensebadge]](LICENSE)
+[![GitHub stars][starsbadge]][stars]
 
----
+Monitor and control your **Ebro** car from Home Assistant, without relying on the official app.
 
-## Qué puedes hacer
+> ⚠️ **Unofficial project.** Strictly for personal use, on your own vehicle and your own account.
+> Not affiliated with or endorsed by Ebro, Chery or Home Assistant.
 
-**Ver** (sensores): batería, autonomía eléctrica y de combustible, cuentakilómetros total y
-eléctrico, presión y
-temperatura de los cuatro neumáticos, estado y tiempo de carga, ubicación en el mapa, y el estado de
-puertas, ventanillas, maletero, capó, techo y cierre centralizado.
-
-**Controlar** (necesita el PIN del vehículo): abrir y cerrar el coche, climatización con temperatura
-ajustable, asientos y volante calefactables, desempañadores, maletero, ventanillas, techo, alarma,
-carga programada con límite de batería, **parar una carga en curso**, localizar el coche por GPS
-y hacerlo sonar y parpadear.
-
----
-
-## Instalación
-
-### Opción A — HACS (recomendada)
-1. En Home Assistant: **HACS → Integraciones → menú (⋮) → Repositorios personalizados**.
-2. Añade la URL de este repositorio con la categoría **Integración**.
-3. Busca **Ebro Auto**, instálala y **reinicia** Home Assistant.
-
-### Opción B — Manual
-1. Copia la carpeta `custom_components/ebro/` dentro de `config/custom_components/`.
-2. **Reinicia** Home Assistant.
+<p align="center">
+  <img src="examples/card-overview.png" alt="Vehicle overview card" width="200">
+  <img src="examples/card-status.png" alt="Doors, windows and warnings" width="200">
+  <img src="examples/card-tyres.png" alt="Tyre pressure and temperature" width="200">
+  <img src="examples/card-charging.png" alt="Charging status" width="200">
+</p>
 
 ---
 
-## Configuración
+## Install
 
-Tras instalar y reiniciar: **Ajustes → Dispositivos y servicios → Añadir integración → Ebro Auto**.
+[![Open your Home Assistant instance and open this repository inside HACS.][hacsrepobadge]][hacsrepo]
 
-### Paso 1 — tu cuenta
+### Option A — HACS (recommended)
 
-- **Teléfono** de tu cuenta Ebro, con el prefijo del país.
-- **Contraseña** de la cuenta.
-- **PIN** de comandos remotos: el mismo que te pide la app para abrir o cerrar el coche.
+Once the integration is in the HACS default store, just search for **Ebro Auto** in HACS and install it.
+Until then, add it as a custom repository:
 
-> ⚠️ **Mejor con la cuenta del titular del vehículo.** Con una cuenta secundaria todo funciona
-> salvo una cosa: el coche no le envía avisos, así que puertas, cierre y maletero no se actualizan
-> solos. Tiene solución —ver [Cuentas secundarias](#cuentas-secundarias)— y la integración te
-> avisa sola si detecta que es tu caso.
+1. In Home Assistant: **HACS → Integrations → ⋮ menu → Custom repositories**.
+2. Add this repository's URL with the **Integration** category.
+3. Search for **Ebro Auto**, install it and **restart** Home Assistant.
 
-Hay además un desplegable **«Avanzado»** con los servidores y el canal de Ebro. Viene relleno con
-los valores correctos para Europa: no lo toques salvo que uses otra región o te lo pidan para
-diagnosticar algo.
+### Option B — Manual
 
-El VIN y el resto de datos se detectan solos al iniciar sesión. Home Assistant guarda la sesión y la
-renueva por su cuenta: no tendrás que volver a escribir la contraseña salvo que caduque.
+1. Copy the `custom_components/ebro/` folder into `config/custom_components/`.
+2. **Restart** Home Assistant.
 
-Las credenciales se guardan **únicamente en tu Home Assistant**. No hay ningún servidor intermedio.
+---
 
-### Paso 2 — cada cuánto consultar
+## Setup
 
-La integración te pregunta cada cuánto pedir los datos que el coche no envía solo (batería,
-autonomía, cuentakilómetros…). Puedes cambiarlo luego en **Configurar**. Todo en **minutos**, y
-**0 significa no consultar** en ese estado:
+After installing and restarting: **Settings → Devices & services → Add integration → Ebro Auto**.
 
-| Cuando el coche está… | Por defecto |
+[![Open your Home Assistant instance and start setting up a new integration.][configflowbadge]][configflow]
+
+### Step 1 — your account
+
+- **Phone number** of your Ebro account, with the country prefix.
+- **Password** of the account.
+- **PIN** for remote commands: the same one the app asks for to lock or unlock the car.
+
+> ⚠️ **Best with the vehicle owner's account.** With a secondary account everything works except
+> one thing: the car does not push notifications to it, so doors, lock and tailgate do not update
+> on their own. There is a workaround — see [Secondary accounts](#secondary-accounts) — and the
+> integration warns you automatically if it detects this is your case.
+
+There is also an **"Advanced"** dropdown with Ebro's servers and channel. It comes pre-filled with
+the correct values for Europe: don't touch it unless you use another region or you are asked to for
+diagnostics.
+
+The VIN and the rest of the data are detected automatically on login. Home Assistant keeps the
+session and renews it on its own: you won't have to type the password again unless it expires.
+
+Credentials are stored **only in your Home Assistant**. There is no intermediate server.
+
+### Step 2 — how often to poll
+
+The integration asks how often to request the data the car does not push on its own (battery,
+range, odometer…). You can change it later in **Configure**. Everything is in **minutes**, and
+**0 means do not poll** in that state:
+
+| When the car is… | Default |
 |---|---|
-| **Parado** | **0 — no se consulta** |
-| **Enchufado** (cable puesto, aún sin cargar) | 30 min |
-| **Cargando** | 15 min |
-| **En marcha** | 3 min |
-| **En marcha detenido** (semáforo, o te bajas con el coche encendido) | 5 min |
-| **Tope enchufado sin cargar** (deja de consultar si el cable no llega a cargar) | 0 — sin límite |
+| **Parked** | **0 — not polled** |
+| **Plugged in** (cable connected, not charging yet) | 30 min |
+| **Charging** | 15 min |
+| **Driving** | 3 min |
+| **Driving, stopped** (traffic light, or you step out with the car on) | 5 min |
+| **Plugged-in cap, not charging** (stops polling if the cable never starts charging) | 0 — no limit |
 
-Subir el valor de **Parado** es perfectamente razonable si quieres que los números se refresquen
-también con el coche aparcado: consultar no despierta el vehículo. Ver
-[Cómo se actualizan los datos](#cómo-se-actualizan-los-datos).
+Raising the **Parked** value is perfectly reasonable if you want the numbers to refresh with the
+car parked too: polling does not wake the vehicle. See [How data is updated](#how-data-is-updated).
 
 ---
 
-## Cómo se actualizan los datos
+## How data is updated
 
-Hay **dos formas** de que un dato llegue a Home Assistant, y saber cuál es cada una explica por qué
-unas cosas se actualizan solas y otras no.
+There are **two ways** for a value to reach Home Assistant, and knowing which is which explains why
+some things update on their own and others don't.
 
-### 1. Lo que el coche envía solo
+### 1. What the car pushes on its own
 
-En cuanto cambian, el coche los manda y aparecen al momento, incluso con «Actualización
-automática» apagada:
+As soon as they change, the car sends them and they appear immediately, even with "Automatic
+update" turned off:
 
-- Puertas, ventanillas, maletero, capó, techo y **cierre centralizado**
-- Climatización, desempañadores, volante y asientos: encendido o apagado
-- **Cable de carga** conectado y **motor** en marcha
+- Doors, windows, tailgate, hood, sunroof and **central locking**
+- Climate, defrosters, steering wheel and seats: on or off
+- **Charging cable** connected and **engine** running
 
-> **Con una cuenta secundaria, nada de esta lista se actualiza solo.** El coche solo envía
-> avisos a la cuenta del titular. Ver [Cuentas secundarias](#cuentas-secundarias).
+> **With a secondary account, none of this list updates on its own.** The car only pushes
+> notifications to the owner's account. See [Secondary accounts](#secondary-accounts).
 
-### 2. Lo que hay que consultar
+### 2. What has to be polled
 
-Los **números** no los envía el coche; hay que pedirlos:
+The **numbers** are not pushed by the car; they have to be requested:
 
-- Batería, autonomía, cuentakilómetros y velocidad
-- Tensión, corriente, tiempo y estado de carga
-- Presión y temperatura de neumáticos, consumos y avisos
+- Battery, range, odometer and speed
+- Charging voltage, current, time and status
+- Tyre pressure and temperature, consumption and warnings
 
-Y aquí está lo importante: **cuando la integración consulta, le pregunta a la nube de Ebro, no al
-coche**. La nube guarda el último estado que el vehículo le comunicó, y eso es lo que devuelve. Con
-el coche despierto ese estado es de hace segundos; con el coche aparcado y dormido puede ser de hace
-un buen rato, porque mientras duerme no informa de nada nuevo.
+And here is the key point: **when the integration polls, it asks the Ebro cloud, not the car**. The
+cloud stores the last state the vehicle reported, and that is what it returns. With the car awake
+that state is seconds old; with the car parked and asleep it may be a while old, because while it
+sleeps it reports nothing new.
 
-El sensor **«Resultado sonda de ubicación»** cuenta cómo fue la última consulta:
+The **"Location probe result"** sensor tells you how the last poll went:
 
-| Estado | Qué significa |
+| State | What it means |
 |---|---|
-| 🟢 En vivo · coche despierto | El coche está conectado; el dato es de ahora mismo |
-| 🟡 Estado desde la nube · hace N min · coche dormido | El coche duerme; esto es lo último que la nube guardó, y de cuándo es |
-| 🟠 Con datos, sin posición | Llegó la telemetría, pero la nube no tiene una ubicación reciente. Se resuelve con «Localizar coche (GPS)» |
-| 🔴 Sin datos · … | La nube no ha devuelto nada, con el motivo |
-| ⏳ Lectura reciente · espero N s | Se acaba de consultar; se espera un poco antes de repetir |
-| 🔑 Sesión caducada · vuelve a autenticarte | Hay que volver a iniciar sesión |
-| 🛰️ Consultando… | En curso; dura un instante |
+| 🟢 Live · car awake | The car is connected; the data is from right now |
+| 🟡 State from cloud · N min ago · car asleep | The car is asleep; this is the latest the cloud stored, and from when |
+| 🟠 Data, no position | Telemetry arrived, but the cloud has no recent location. Solved with "Locate car (GPS)" |
+| 🔴 No data · … | The cloud returned nothing, with the reason |
+| ⏳ Recent read · waiting N s | Just polled; it waits a bit before retrying |
+| 🔑 Session expired · re-authenticate | You need to log in again |
+| 🛰️ Polling… | In progress; takes a moment |
 
-La posición merece fila propia porque puede faltar aunque el resto llegue: la nube solo la tiene si
-el coche se la ha comunicado. Si te hace falta al momento, «Localizar coche (GPS)» se la pide.
+Position gets its own row because it may be missing even when the rest arrives: the cloud only has
+it if the car reported it. If you need it right now, "Locate car (GPS)" requests it.
 
-### Consultar no despierta el coche
+### Polling does not wake the car
 
-Solo lo despiertan los **mandos**: abrir, cerrar, climatización, «Localizar coche (GPS)»… Consultar
-no le pide nada al vehículo, así que puedes ajustar los intervalos con tranquilidad.
+Only **commands** wake it: lock, unlock, climate, "Locate car (GPS)"… Polling asks the vehicle for
+nothing, so you can adjust the intervals with peace of mind.
 
-La única excepción es el botón **«Actualizar estado completo»**: enciende la climatización durante
-un minuto a propósito, porque es la única forma de leer batería y cuentakilómetros reales con el
-coche frío. Es, con diferencia, el que más consume: úsalo con moderación.
+The only exception is the **"Full status refresh"** button: it turns the climate on for a minute on
+purpose, because that is the only way to read real battery and odometer with the car cold. It is by
+far the most power-hungry: use it sparingly.
 
-De ahí también la diferencia entre los dos botones de ubicación: **«Actualizar ubicación»** trae la
-última posición conocida por la nube, mientras que **«Localizar coche (GPS)»** hace que el coche
-informe de dónde está ahora mismo.
+Hence also the difference between the two location buttons: **"Update location"** fetches the last
+position known to the cloud, while **"Locate car (GPS)"** makes the car report where it is right now.
 
-### La consulta automática
+### Automatic polling
 
-La controla el interruptor **«Actualización automática»**, y el ritmo cambia según lo que esté
-haciendo el coche:
+It is controlled by the **"Automatic update"** switch, and the pace changes with what the car is
+doing:
 
-- **Enchufado y Cargando:** se detecta por el cable y por si está entrando corriente. Enchufado
-  consulta despacio y, al empezar a cargar de verdad, pasa al ritmo de carga.
-- **En marcha:** circulando, el coche envía avisos muy seguidos; eso, con el sistema eléctrico de
-  tracción («alta tensión») encendido, es lo que la integración entiende como «en marcha». Si dejan
-  de llegar pero el coche sigue encendido (un semáforo, o te bajas sin apagarlo), pasa a «en marcha
-  detenido».
-- **Parado:** el coche apagado del todo. Si dejas ese intervalo en 0, no se consulta nada hasta que
-  el coche vuelva a dar señales.
+- **Plugged in and Charging:** detected by the cable and by whether current is flowing. Plugged in
+  polls slowly and, when it actually starts charging, switches to the charging pace.
+- **Driving:** while moving, the car sends notifications very frequently; that, with the high-voltage
+  traction system on, is what the integration reads as "driving". If they stop arriving but the car
+  is still on (a traffic light, or you step out without turning it off), it switches to "driving,
+  stopped".
+- **Parked:** the car fully off. If you leave that interval at 0, nothing is polled until the car
+  gives signals again.
 
-Con el coche frío ninguna consulta obtiene batería ni cuentakilómetros reales, por mucho que bajes
-los intervalos: hace falta que el coche esté encendido.
+With the car cold no poll gets real battery or odometer, no matter how low you set the intervals:
+the car needs to be on.
 
 ---
 
-## Carga programada
+## Scheduled charging
 
-La **hora de inicio** y la **duración** muestran la programación que tiene el coche, y puedes
-cambiarlas desde Home Assistant. La hora la pones en tu **hora local**; la conversión se hace sola.
-La duración es un selector **HH:MM**, así que puedes poner por ejemplo 02:15.
+The **start time** and **duration** show the schedule the car has, and you can change them from
+Home Assistant. You set the time in your **local time**; the conversion is done automatically. The
+duration is an **HH:MM** selector, so you can set, for example, 02:15.
 
-Al cambiarlas **no se envían solas**: pulsa **«Aplicar carga programada»** (o vuelve a activar el
-interruptor «Carga programada») para mandárselas al coche.
+Changing them **does not send them on its own**: press **"Apply scheduled charging"** (or toggle the
+"Scheduled charging" switch on again) to send them to the car.
 
-El sensor **«Carga programada en el coche»** enseña lo que hay puesto en el vehículo, incluso si lo
-cambiaste desde la app oficial: la hora, si está activada y qué días se aplica.
+The **"Scheduled charging on the car"** sensor shows what is set on the vehicle, even if you changed
+it from the official app: the time, whether it is on and which days it applies.
 
-## Programar la carga desde una automatización
+## Scheduling charging from an automation
 
-Las entidades de hora y duración **guardan una preferencia**: no mandan nada al coche hasta que
-pulsas «Aplicar carga programada». Es a propósito — así mover un control por accidente no le da
-órdenes al coche.
+The time and duration entities **store a preference**: they send nothing to the car until you press
+"Apply scheduled charging". This is on purpose — so moving a control by accident doesn't issue
+commands to the car.
 
-Para automatizaciones hay una acción que lo hace todo de una vez:
+For automations there is one action that does it all at once:
 
 ```yaml
 action: ebro.programar_carga
@@ -182,92 +190,116 @@ target:
   entity_id: switch.ebro_XXXX_carga_programada
 data:
   hora_inicio: "02:00:00"
-  duracion: 240        # minutos (mínimo 60: el coche rechaza menos)
+  duracion: 240        # minutes (minimum 60: the car rejects less)
   activar: true
 ```
 
-Útil, por ejemplo, para cargar en las horas más baratas de luz sin tener que encadenar tres
-llamadas y confiar en el orden.
+Useful, for example, to charge during the cheapest electricity hours without chaining three calls
+and relying on their order.
 
-**Para parar una carga en curso** usa el botón **«Parar carga»**. El interruptor de carga
-programada apagado solo desactiva la programación; no corta una carga ya empezada.
+**To stop a charge in progress** use the **"Stop charging"** button. Turning the scheduled-charging
+switch off only disables the schedule; it does not stop a charge already underway.
 
-Este coche **no permite arrancar ni parar la carga directamente** (su permiso «Control de Carga»
-viene denegado de fábrica), así que «Parar carga» lo consigue imponiendo una programación cuya
-ventana ya ha terminado. Funciona, pero tarda unos segundos en surtir efecto.
+This car **does not allow starting or stopping charging directly** (its "Charge Control" permission
+is denied from the factory), so "Stop charging" achieves it by imposing a schedule whose window has
+already ended. It works, but takes a few seconds to take effect.
 
-## Límite de carga
+## Charge limit
 
-El coche no trae un tope de carga, así que la integración lo hace por su cuenta:
+The car has no charge cap, so the integration does it on its own:
 
-1. Enciende **«Limitar carga al porcentaje»** y elige el **«Límite de carga (%)»**, por ejemplo 80.
-2. Mientras carga, la integración vigila la batería y corta la carga al llegar al objetivo.
+1. Turn on **"Limit charge to percentage"** and pick the **"Charge limit (%)"**, for example 80.
+2. While charging, the integration watches the battery and stops the charge when the target is reached.
 
-Ten en cuenta que:
+Keep in mind that:
 
-- Necesita **«Actualización automática» encendida** y el intervalo de **«Cargando» mayor que 0**:
-  es lo que permite ir mirando la batería. La integración no te deja encender el límite si falta
-  alguna de las dos, y te dice cuál; y si quitas una de las dos después, el límite se apaga solo
-  — así no te quedas con un interruptor encendido que no está haciendo nada.
-- Cerca del objetivo consulta más a menudo para afinar el corte, pero aun así puede pasarse un
-  **1–2 %** según lo rápido que esté cargando.
-
----
-
-## Cuentas secundarias
-
-Si usas una **cuenta secundaria** —una a la que el titular del coche le ha dado acceso— hay una
-diferencia que conviene conocer. La integración lo detecta sola y te lo avisa en **Ajustes →
-Reparaciones**.
-
-**Funciona con normalidad:** consultar el estado, la batería, la autonomía, la posición, y todos
-los comandos — abrir, cerrar, climatización, maletero, ventanillas.
-
-**No funciona:** el coche **no envía avisos por su cuenta** a las cuentas secundarias. Puertas,
-cierre y maletero no se actualizan solos.
-
-Es una limitación del servidor de Ebro, no de esta integración: la **app oficial tampoco recibe
-esos avisos** con una cuenta secundaria. Lo que hace para parecer instantánea es **preguntar cada
-pocos segundos**.
-
-**Para que los estados se actualicen solos**, puedes hacer lo mismo: en las opciones de la
-integración, pon un número distinto de 0 en **«Sondeo con el coche parado»**. Cuanto más bajo,
-antes se refleja un cambio — y más peticiones se hacen a la nube de Ebro. Ten en cuenta que la app
-solo pregunta mientras está abierta en pantalla, y Home Assistant lo haría a todas horas.
-
-**Con la cuenta del titular** no hace falta nada de esto: los avisos llegan solos.
+- It needs **"Automatic update" on** and the **"Charging" interval greater than 0**: that is what
+  lets it watch the battery. The integration won't let you turn the limit on if either is missing,
+  and tells you which; and if you remove one of the two afterwards, the limit turns off on its own
+  — so you are not left with a switch that is on but doing nothing.
+- Near the target it polls more often to fine-tune the cutoff, but it can still overshoot by
+  **1–2%** depending on how fast it is charging.
 
 ---
 
-## Tarjeta para el panel (recomendada)
+## Secondary accounts
 
-Para una vista completa del coche —imagen del vehículo, autonomías, neumáticos, accesos, clima,
-carga y mapa— va muy bien la tarjeta **Vehicle Status Card** de
-[@ngocjohn](https://github.com/ngocjohn/vehicle-status-card). Se instala desde **HACS → Frontend →
-Repositorios personalizados**, con la categoría *Dashboard*.
+If you use a **secondary account** — one the car owner has granted access to — there is a difference
+worth knowing. The integration detects it on its own and warns you in **Settings → Repairs**.
 
-En este repositorio tienes una lista para adaptar:
+**Works normally:** polling the status, battery, range, position, and all commands — lock, unlock,
+climate, tailgate, windows.
+
+**Does not work:** the car **does not push notifications on its own** to secondary accounts. Doors,
+lock and tailgate do not update by themselves.
+
+This is a limitation of the Ebro server, not of this integration: the **official app doesn't receive
+those notifications either** with a secondary account. What it does to seem instant is **ask every
+few seconds**.
+
+**To make the states update on their own**, you can do the same: in the integration options, set a
+non-zero value in **"Poll while parked"**. The lower it is, the sooner a change is reflected — and
+the more requests are made to the Ebro cloud. Bear in mind the app only asks while open on screen,
+and Home Assistant would do it around the clock.
+
+**With the owner's account** none of this is needed: notifications arrive on their own.
+
+---
+
+## Dashboard card (recommended)
+
+For a complete view of the car — vehicle image, ranges, tyres, access, climate, charging and map —
+the **Vehicle Status Card** by [@ngocjohn](https://github.com/ngocjohn/vehicle-status-card) works
+very well. Install it from **HACS → Frontend → Custom repositories**, with the *Dashboard* category.
+
+This repository has a ready-made config to adapt:
 **[`examples/vehicle-status-card.yaml`](examples/vehicle-status-card.yaml)**.
 
-1. Copia su contenido en una tarjeta manual: **Editar panel → Añadir tarjeta → Manual**.
-2. **Sustituye `XXXX`** por los **cuatro últimos dígitos del VIN** de tu coche (buscar y reemplazar
-   `ebro_XXXX_` por `ebro_1234_`).
-3. La **imagen del coche** se elige en la interfaz de la tarjeta; en el YAML aparece marcada como
-   `[ENLACE A IMAGEN LOCAL. CONFIGURAR EN GUI DE TARJETA]`. En `examples/` tienes `S900_General.png`
-   y `S900_Top.png` (vista cenital, para los neumáticos).
+1. Copy its content into a manual card: **Edit dashboard → Add card → Manual**.
+2. **Replace `XXXX`** with the **last four digits of your car's VIN** (find and replace `ebro_XXXX_`
+   with `ebro_1234_`).
+3. The **car image** is chosen in the card's UI; in the YAML it is marked as
+   `[ENLACE A IMAGEN LOCAL. CONFIGURAR EN GUI DE TARJETA]`. In `examples/` you have `S900_General.png`
+   and `S900_Top.png` (top-down view, for the tyres).
 
 ---
 
-## Privacidad
+## Privacy
 
-Todo el tráfico va directo entre tu Home Assistant y los servidores de Ebro/Chery, y tus
-credenciales no salen de tu instalación.
+All traffic goes directly between your Home Assistant and the Ebro/Chery servers, and your
+credentials never leave your installation.
 
-## Agradecimientos
+## Support
 
-Basada en el excelente trabajo de
-**[omoda9-ha](https://github.com/Caslinovich/omoda9-ha)**, adaptado a la marca **Ebro**.
+If this integration is useful to you, you can support its development:
 
-## Licencia
+[![Ko-fi][kofibadge]][kofi]
+[![PayPal][paypalbadge]][paypal]
 
-MIT — ver [LICENSE](LICENSE).
+## Credits
+
+Based on the excellent work of
+**[omoda9-ha](https://github.com/Caslinovich/omoda9-ha)**, adapted to the **Ebro** brand.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+<!-- Badges -->
+[hacs]: https://github.com/hacs/default
+[hacsbadge]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg
+[releases]: https://github.com/jcortizronda/ebroAuto_homeAssistant/releases
+[releasebadge]: https://img.shields.io/github/v/release/jcortizronda/ebroAuto_homeAssistant
+[validate]: https://github.com/jcortizronda/ebroAuto_homeAssistant/actions/workflows/validate.yml
+[validatebadge]: https://img.shields.io/github/actions/workflow/status/jcortizronda/ebroAuto_homeAssistant/validate.yml?branch=main&label=validate
+[licensebadge]: https://img.shields.io/github/license/jcortizronda/ebroAuto_homeAssistant
+[stars]: https://github.com/jcortizronda/ebroAuto_homeAssistant/stargazers
+[starsbadge]: https://img.shields.io/github/stars/jcortizronda/ebroAuto_homeAssistant?style=flat
+[hacsrepo]: https://my.home-assistant.io/redirect/hacs_repository/?owner=jcortizronda&repository=ebroAuto_homeAssistant&category=integration
+[hacsrepobadge]: https://my.home-assistant.io/badges/hacs_repository.svg
+[configflow]: https://my.home-assistant.io/redirect/config_flow_start/?domain=ebro
+[configflowbadge]: https://my.home-assistant.io/badges/config_flow_start.svg
+[kofi]: https://ko-fi.com/jcortizronda
+[kofibadge]: https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white
+[paypal]: https://www.paypal.me/jcortizronda/
+[paypalbadge]: https://img.shields.io/badge/PayPal-Donate-00457C?logo=paypal&logoColor=white
