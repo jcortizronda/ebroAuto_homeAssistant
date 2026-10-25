@@ -143,9 +143,11 @@ class EbroMqttClient:
             callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
             client_id=cfg.client_id, protocol=mqtt.MQTTv311, clean_session=False)
         client.username_pw_set(cfg.tuserid, cfg.password)
+        # Verificación completa: CA del bundle + nombre del broker. El certificado del broker
+        # tiene un CN raro (`CN=CA`), pero su SAN es el host, que es lo que comprueba `ssl`.
+        # Nunca `tls_insecure_set(True)`: aceptaría cualquier certificado firmado por esa CA.
         client.tls_set(**certificates.tls_paths(cfg.certs_dir),
                        cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLS_CLIENT)
-        client.tls_insecure_set(True)  # el broker usa un CN que no coincide
 
         def _on_connect(cl, _userdata, _flags, rc, _props=None):
             ok = (rc == 0) or (getattr(rc, "value", 1) == 0)

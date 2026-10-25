@@ -8,6 +8,7 @@ que si el coche estuviera dormido.
 
 from __future__ import annotations
 
+import ssl
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -52,6 +53,17 @@ def test_identidad_que_exige_la_acl_del_broker() -> None:
     llegar a suscribirse). Mira el clientId, y el formato de la app no nos vale."""
     assert CONFIG.client_id == "app_4_U123"
     assert CONFIG.topic == "app/4/U123/account/msgCenter/msg"
+
+
+def test_el_tls_verifica_el_nombre_del_broker(cliente_paho) -> None:
+    """La conexión lleva el login MQTT y la telemetría (GPS incluido): sin comprobar el nombre,
+    cualquier certificado firmado por la CA del bundle pasaría por el broker."""
+    _conectar(cliente_paho)
+
+    _, kwargs = cliente_paho.tls_set.call_args
+    assert kwargs["cert_reqs"] == ssl.CERT_REQUIRED
+    assert kwargs["tls_version"] == ssl.PROTOCOL_TLS_CLIENT
+    cliente_paho.tls_insecure_set.assert_not_called()
 
 
 def test_la_conexion_suscribe_el_topic(cliente_paho) -> None:
