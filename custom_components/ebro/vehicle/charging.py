@@ -36,19 +36,24 @@ _LOGGER = logging.getLogger(__name__)
 ALL_WEEKDAYS = [1, 2, 3, 4, 5, 6, 7]
 
 
+def _utc_offset_minutes() -> int:
+    """Desfase de la hora local de HA respecto a UTC, en minutos: el que rige AHORA.
+
+    Las dos conversiones usan este mismo desfase. Antes cada una lo sacaba de una fecha
+    distinta (la local de hoy y la UTC de hoy); el día del cambio de hora una caía antes del
+    cambio y la otra después, y algunas horas salían con una hora de error."""
+    offset = dt_util.now().utcoffset()
+    return int(offset.total_seconds() // 60) if offset else 0
+
+
 def local_minutes_to_utc(local_mins: int) -> int:
     """Minutos-desde-medianoche en HORA LOCAL de HA → minutos-desde-medianoche en UTC.
 
     El backend de Ebro interpreta el `startTime` de la carga programada en UTC (verificado en
     campo: con zona horaria local UTC+2 una carga puesta a las 03:00 arrancaba a las 05:00). HA
     guarda la hora tal como la elige el usuario (reloj de pared local), así que hay que pasarla
-    a UTC antes de enviarla. Se usa la fecha de HOY para que el desfase respete el horario de
-    verano/invierno vigente."""
-    local_mins = int(local_mins) % MINUTES_PER_DAY
-    hh, mm = divmod(local_mins, 60)
-    local_dt = dt_util.now().replace(hour=hh, minute=mm, second=0, microsecond=0)
-    utc_dt = dt_util.as_utc(local_dt)
-    return utc_dt.hour * 60 + utc_dt.minute
+    a UTC antes de enviarla, con el desfase de verano/invierno vigente."""
+    return (int(local_mins) - _utc_offset_minutes()) % MINUTES_PER_DAY
 
 
 def utc_minutes_to_local(utc_mins: int) -> int:
@@ -57,11 +62,7 @@ def utc_minutes_to_local(utc_mins: int) -> int:
     Hace falta para ENSEÑAR la programación que tiene el coche. Sin esto, una carga puesta a
     las 03:00 desde la app se mostraría como 01:00 en España, y el usuario pensaría que la
     integración se ha equivocado — cuando el desfase es solo el formato del backend."""
-    utc_mins = int(utc_mins) % MINUTES_PER_DAY
-    hh, mm = divmod(utc_mins, 60)
-    utc_dt = dt_util.utcnow().replace(hour=hh, minute=mm, second=0, microsecond=0)
-    local_dt = dt_util.as_local(utc_dt)
-    return local_dt.hour * 60 + local_dt.minute
+    return (int(utc_mins) + _utc_offset_minutes()) % MINUTES_PER_DAY
 
 
 @dataclass(frozen=True)

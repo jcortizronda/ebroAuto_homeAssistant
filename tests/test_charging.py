@@ -64,6 +64,40 @@ async def test_local_minutes_to_utc_respeta_el_horario_de_verano(
     assert local_minutes_to_utc(3 * 60) == 1 * 60
 
 
+@pytest.mark.parametrize(
+    ("zona", "instante"),
+    [
+        # Días de cambio de hora, en el instante en que corre el CI. El primero es el run que
+        # falló el 1-nov-2026: 23:59 local volvía como 00:59.
+        ("US/Pacific", "2026-11-01 12:59:13+00:00"),
+        ("US/Pacific", "2027-03-14 12:00:00+00:00"),
+        ("Europe/Madrid", "2026-10-25 12:00:00+00:00"),
+        ("Europe/Madrid", "2027-03-28 12:00:00+00:00"),
+    ],
+)
+async def test_las_conversiones_son_inversas_el_dia_del_cambio_de_hora(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, zona: str, instante: str
+) -> None:
+    """Las dos conversiones tienen que usar el MISMO desfase. Si no, el día del cambio de hora
+    una hora enviada al coche se enseña desplazada, y lo que se envía sale con una hora de error."""
+    await hass.config.async_set_time_zone(zona)
+    freezer.move_to(instante)
+
+    for minutos in range(MINUTES_PER_DAY):
+        assert charging.utc_minutes_to_local(local_minutes_to_utc(minutos)) == minutos
+
+
+async def test_el_dia_del_cambio_de_hora_se_envia_con_el_desfase_que_ya_rige(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    """25-oct-2026 por la tarde en España ya es invierno (UTC+1): una carga a las 00:30 tiene
+    que ir como 23:30 UTC. Antes salía 22:30 UTC, y el coche habría empezado a las 23:30."""
+    await hass.config.async_set_time_zone("Europe/Madrid")
+    freezer.move_to("2026-10-25 12:00:00+00:00")
+
+    assert local_minutes_to_utc(30) == 23 * 60 + 30
+
+
 async def test_local_minutes_to_utc_da_la_vuelta_a_medianoche(hass: HomeAssistant) -> None:
     assert local_minutes_to_utc(25 * 60) == local_minutes_to_utc(60)
 
